@@ -90,8 +90,20 @@ func (d *DeltaSharingRestClient) callSharingServer(request string) [][]byte {
 }
 func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string, maxResult int, pageToken string) [][]byte {
 	var responses [][]byte
-	url := d.Profile.Endpoint + request
-	response, err := http.Get(url)
+	rawUrl := d.Profile.Endpoint + request
+	urlval, _ := url.Parse(rawUrl)
+
+	req := &http.Request{
+		Method: "GET",
+		URL:    urlval,
+		Header: map[string][]string{
+			"Content-Type":  {"application/json; charset=UTF-8"},
+			"Authorization": {"Bearer " + d.Profile.BearerToken},
+		},
+	}
+	response, err := http.DefaultClient.Do(req)
+
+	//response, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
 	}

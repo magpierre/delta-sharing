@@ -40,6 +40,12 @@ func NewDeltaSharingProfile(filename string) *DeltaSharingProfile {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	x, err := json.MarshalIndent(d, "", "    ")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("response: %+v\n", string(x))
 	return &d
 }
 
