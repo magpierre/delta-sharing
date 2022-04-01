@@ -20,12 +20,12 @@ package delta_sharing
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -72,23 +72,7 @@ func NewDeltaSharingRestClient(ctx context.Context, profile *DeltaSharingProfile
 	return &DeltaSharingRestClient{Profile: profile, NumRetries: numRetries, Ctx: ctx}
 }
 
-func (d *DeltaSharingRestClient) callSharingServer(request string) [][]byte {
-	var responses [][]byte
-	url := d.Profile.Endpoint + request
-	response, err := http.Get(url)
-	if err != nil {
-		fmt.Println(err)
-	}
-	s := bufio.NewScanner(response.Body)
-	for s.Scan() {
-		responses = append(responses, s.Bytes())
-	}
-	if err := s.Err(); err != nil {
-		log.Fatal(err)
-	}
-	return responses
-}
-func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string, maxResult int, pageToken string) [][]byte {
+func (d *DeltaSharingRestClient) callSharingServer(request string) ([][]byte, error) {
 	var responses [][]byte
 	rawUrl := d.Profile.Endpoint + request
 	urlval, _ := url.Parse(rawUrl)
@@ -102,23 +86,67 @@ func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string,
 		},
 	}
 	response, err := http.DefaultClient.Do(req)
-
-	//response, err := http.Get(url)
 	if err != nil {
-		fmt.Println(err)
+		return [][]byte{}, err
 	}
 	s := bufio.NewScanner(response.Body)
 	for s.Scan() {
 		responses = append(responses, s.Bytes())
 	}
 	if err := s.Err(); err != nil {
-		log.Fatal(err)
+		return [][]byte{}, err
 	}
-	return responses
+	return responses, err
+}
+func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string, maxResult int, pageToken string) (*[][]byte, error) {
+	var responses [][]byte
+	rawUrl := d.Profile.Endpoint + request
+	urlval, _ := url.Parse(rawUrl)
+	req := &http.Request{
+		Method: "GET",
+		URL:    urlval,
+		Header: map[string][]string{
+			"Content-Type":  {"application/json; charset=UTF-8"},
+			"Authorization": {"Bearer " + d.Profile.BearerToken},
+		},
+	}
+	/*
+		reqDump, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			log.Println(err)
+		}
+
+		log.Printf("REQUEST:\n%s", string(reqDump))
+	*/
+	response, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+	/*
+		respDump, err := httputil.DumpResponse(response, true)
+		if err != nil {
+			log.Println(err)
+		}
+
+		log.Printf("RESPONSE:\n%s", string(respDump))
+	*/
+
+	s := bufio.NewScanner(response.Body)
+	for s.Scan() {
+		responses = append(responses, s.Bytes())
+	}
+	if err := s.Err(); err != nil {
+		return nil, err
+	}
+	return &responses, err
 }
 
-func (d *DeltaSharingRestClient) getResponseHeader(request string) map[string][]string {
+func (d *DeltaSharingRestClient) getResponseHeader(request string) (map[string][]string, error) {
 	url, err := url.Parse(d.Profile.Endpoint + request)
+	if err != nil {
+		return nil, err
+	}
 	req := &http.Request{
 		Method: "HEAD",
 		URL:    url,
@@ -129,151 +157,164 @@ func (d *DeltaSharingRestClient) getResponseHeader(request string) map[string][]
 	}
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal("Error:", err)
+		return nil, err
 	}
 	fmt.Println(response)
-	return response.Header
+	return response.Header, err
 }
 
-func (c DeltaSharingRestClient) ListShares(maxResult int, pageToken string) ListSharesResponse {
+func (c DeltaSharingRestClient) ListShares(maxResult int, pageToken string) (ListSharesResponse, error) {
 	// TODO Add support for parameters
 	url := "/shares"
-	rd := c.callSharingServerWithParameters(url, maxResult, pageToken)
-
+	rd, err := c.callSharingServerWithParameters(url, maxResult, pageToken)
+	if err != nil {
+		return ListSharesResponse{}, err
+	}
 	var shares []Share
 	var share ProtoShare
-	err := json.Unmarshal(rd[0], &share)
+	err = json.Unmarshal((*rd)[0], &share)
 	if err != nil {
-		fmt.Println(err)
+		return ListSharesResponse{}, err
 	}
 	shares = append(shares, share.Items...)
-
-	return ListSharesResponse{Shares: shares}
-
+	return ListSharesResponse{Shares: shares}, err
 }
 
-func (c DeltaSharingRestClient) ListSchemas(share Share, maxResult int, pageToken string) ListSchemasResponse {
+func (c DeltaSharingRestClient) ListSchemas(share Share, maxResult int, pageToken string) (ListSchemasResponse, error) {
 	// TODO Add support for parameters
 	url := "/shares/" + share.Name + "/schemas"
-	rd := c.callSharingServerWithParameters(url, maxResult, pageToken)
+	rd, err := c.callSharingServerWithParameters(url, maxResult, pageToken)
+	if err != nil {
+		return ListSchemasResponse{}, err
+	}
 	var schemas []Schema
 	var schema ProtoSchema
-	err := json.Unmarshal(rd[0], &schema)
+	err = json.Unmarshal((*rd)[0], &schema)
 	if err != nil {
-		fmt.Println(err)
+		return ListSchemasResponse{}, err
 	}
 	schemas = append(schemas, schema.Items...)
 
-	return ListSchemasResponse{Schemas: schemas}
+	return ListSchemasResponse{Schemas: schemas}, err
 }
 
-func (c DeltaSharingRestClient) ListTables(schema Schema, maxResult int, pageToken string) ListTablesResponse {
+func (c DeltaSharingRestClient) ListTables(schema Schema, maxResult int, pageToken string) (ListTablesResponse, error) {
 	url := "/shares/" + schema.Share + "/schemas/" + schema.Name + "/tables"
-	rd := c.callSharingServerWithParameters(url, maxResult, pageToken)
+	rd, err := c.callSharingServerWithParameters(url, maxResult, pageToken)
+	if err != nil {
+		return ListTablesResponse{}, err
+	}
 	var table ProtoTable
 	var tables []Table
-	err := json.Unmarshal(rd[0], &table)
+	err = json.Unmarshal((*rd)[0], &table)
 	if err != nil {
-		fmt.Println(err)
+		return ListTablesResponse{}, err
 	}
 	tables = append(tables, table.Items...)
-
-	return ListTablesResponse{Tables: tables}
+	return ListTablesResponse{Tables: tables}, err
 }
 
-func (c DeltaSharingRestClient) ListAllTables(share Share, maxResult int, pageToken string) ListAllTablesResponse {
+func (c DeltaSharingRestClient) ListAllTables(share Share, maxResult int, pageToken string) (ListAllTablesResponse, error) {
 	url := "/shares/" + share.Name + "/all-tables"
-	rd := c.callSharingServerWithParameters(url, maxResult, pageToken)
+	rd, err := c.callSharingServerWithParameters(url, maxResult, pageToken)
+	if err != nil {
+		return ListAllTablesResponse{}, err
+	}
 	var tables []Table
 	var p Protocol
-	err := json.Unmarshal(rd[0], &p)
+	err = json.Unmarshal((*rd)[0], &p)
 	if err != nil {
-		log.Fatal(err)
+		return ListAllTablesResponse{}, err
 	}
-
-	for _, v := range rd[1:] {
+	for _, v := range (*rd)[1:] {
 		table := Table{}
 		err = json.Unmarshal(v, &table)
 		if err != nil {
-			log.Fatal(err)
+			return ListAllTablesResponse{}, err
 		}
 		tables = append(tables, table)
 	}
-
-	return ListAllTablesResponse{Tables: tables}
+	return ListAllTablesResponse{Tables: tables}, err
 }
 
-func (c DeltaSharingRestClient) QueryTableMetadata(table Table) QueryTableMetadataReponse {
+func (c DeltaSharingRestClient) QueryTableMetadata(table Table) (*QueryTableMetadataReponse, error) {
 	url := "/shares/" + table.Share + "/schemas/" + table.Schema + "/tables/" + table.Name + "/metadata"
-	rd := c.callSharingServer(url)
+	rd, err := c.callSharingServer(url)
+	if err != nil {
+		return nil, err
+	}
 	var metadata Metadata
 	var p Protocol
-	err := json.Unmarshal(rd[0], &p)
+	err = json.Unmarshal(rd[0], &p)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-
 	err = json.Unmarshal(rd[1], &metadata)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-
-	return QueryTableMetadataReponse{Metadata: metadata, Protocol: p}
+	return &QueryTableMetadataReponse{Metadata: metadata, Protocol: p}, err
 }
 
-func (c DeltaSharingRestClient) QueryTableVersion(table Table) QueryTableVersionResponse {
+func (c DeltaSharingRestClient) QueryTableVersion(table Table) (*QueryTableVersionResponse, error) {
 	rawUrl := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name
-	r := c.getResponseHeader(rawUrl)
+	r, err := c.getResponseHeader(rawUrl)
+	if err != nil {
+		return nil, err
+	}
 	i, err := strconv.Atoi(r["Delta-Table-Version"][0])
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return QueryTableVersionResponse{DeltaTableVersion: i}
+	return &QueryTableVersionResponse{DeltaTableVersion: i}, err
 }
 
-func (c *DeltaSharingRestClient) ListFilesInTable(table Table) ListFilesInTableResponse {
+func (c *DeltaSharingRestClient) ListFilesInTable(table Table) (*ListFilesInTableResponse, error) {
 	url := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name + "/query"
-	rd := c.postQuery(url, nil, nil)
-
+	rd, err := c.postQuery(url, []string{""}, 0)
+	if err != nil {
+		return nil, err
+	}
 	var p Protocol
 	var m Metadata
 	var f ProtoFile
-
-	err := json.Unmarshal(rd[0], &p)
+	err = json.Unmarshal((*rd)[0], &p)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-
-	err = json.Unmarshal(rd[1], &m)
+	err = json.Unmarshal((*rd)[1], &m)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-
 	l := ListFilesInTableResponse{Protocol: p, Metadata: m}
-
-	for _, v := range rd[2:] {
+	for _, v := range (*rd)[2:] {
+		if len(v) == 0 {
+			continue
+		}
 		err = json.Unmarshal(v, &f)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-
 		l.AddFiles = append(l.AddFiles, f.File)
 	}
-	return l
+	return &l, err
 }
 
-func (c *DeltaSharingRestClient) postQuery(request string, predicateHints *[]string, limitHint *int) [][]byte {
+func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []string, limitHint int) (*[][]byte, error) {
 	// create request body
 	rawURL := c.Profile.Endpoint + "/" + request
 	var responses [][]byte
-	reqBody := ioutil.NopCloser(strings.NewReader(`
-		{
-			"predicateHints": [],
-			"limitHint": 0
-		}
-	`))
-
+	data := Data{PredicateHints: predicateHints, LimitHint: limitHint}
+	fmt.Println(data)
+	msg, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	reqBody := ioutil.NopCloser(strings.NewReader(string(msg)))
 	url, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
 	req := &http.Request{
 		Method: "POST",
 		URL:    url,
@@ -285,16 +326,12 @@ func (c *DeltaSharingRestClient) postQuery(request string, predicateHints *[]str
 	}
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal("Error:", err)
+		return nil, err
 	}
-
-	// Scan the body and split the body into an array of responses
-	s := bufio.NewScanner(response.Body)
-	for s.Scan() {
-		responses = append(responses, s.Bytes())
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	x := bytes.Split(bodyBytes, []byte{'\n'})
+	for _, v := range x {
+		responses = append(responses, v)
 	}
-	if err := s.Err(); err != nil {
-		log.Fatal(err)
-	}
-	return responses
+	return &responses, err
 }
