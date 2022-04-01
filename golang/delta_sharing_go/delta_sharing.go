@@ -21,7 +21,6 @@ package delta_sharing
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/rocketlaunchr/dataframe-go"
@@ -56,22 +55,22 @@ func _ParseURL(url string) (string, string, string, string) {
 	return profile, share, schema, table
 }
 
-func LoadAsDataFrame(url string) *dataframe.DataFrame {
+func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
 	profile, shareStr, schemaStr, tableStr := _ParseURL(url)
 	s := NewSharingClient(context.Background(), profile)
 	t := Table{Share: shareStr, Schema: schemaStr, Name: tableStr}
-	lf := s.RestClient.ListFilesInTable(t)
+	lf, _ := s.RestClient.ListFilesInTable(t)
 	parquetFile, err := http.NewHttpReader(lf.AddFiles[0].Url, false, false, map[string]string{})
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	ctx := context.Background()
 	df, err := imports.LoadFromParquet(ctx, parquetFile)
 
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return df
+	return df, err
 }
 
 type SharingClient struct {
@@ -85,28 +84,31 @@ func NewSharingClient(Ctx context.Context, ProfileFile string) *SharingClient {
 	return &SharingClient{Profile: p, RestClient: r}
 }
 
-func (s *SharingClient) ListShares() []Share {
-	shares := s.RestClient.ListShares(0, "")
-	return shares.Shares
+func (s *SharingClient) ListShares() ([]Share, error) {
+	shares, err := s.RestClient.ListShares(0, "")
+	return shares.Shares, err
 }
 
-func (s *SharingClient) ListSchemas(share Share) []Schema {
-	schemas := s.RestClient.ListSchemas(share, 0, "")
-	return schemas.Schemas
+func (s *SharingClient) ListSchemas(share Share) ([]Schema, error) {
+	schemas, err := s.RestClient.ListSchemas(share, 0, "")
+	return schemas.Schemas, err
 }
 
-func (s *SharingClient) ListTables(schema Schema) []Table {
-	tables := s.RestClient.ListTables(schema, 0, "")
-	return tables.Tables
+func (s *SharingClient) ListTables(schema Schema) ([]Table, error) {
+	tables, err := s.RestClient.ListTables(schema, 0, "")
+	return tables.Tables, err
 }
 
-func (s *SharingClient) ListAllTables() []Table {
-	shares := s.RestClient.ListShares(0, "")
+func (s *SharingClient) ListAllTables() ([]Table, error) {
+	shares, err := s.RestClient.ListShares(0, "")
+	if err != nil {
+		return nil, err
+	}
 	var ctl []Table
 	for _, v := range shares.Shares {
-		x := s.RestClient.ListAllTables(v, 0, "")
+		x, _ := s.RestClient.ListAllTables(v, 0, "")
 		ctl = append(ctl, x.Tables...)
 	}
 
-	return ctl
+	return ctl, err
 }
