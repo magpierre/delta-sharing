@@ -34,20 +34,15 @@ func _ParseURL(url string) (string, string, string, string) {
 		fmt.Println("Invalid URL:", url)
 		return "", "", "", ""
 	}
-
 	profile := url[0:i]
-
 	fragments := strings.Split(url[i+1:], ".")
-
 	if len(fragments) != 3 {
 		fmt.Println("Invalid URL:", url)
 		return "", "", "", ""
 	}
-
 	share := strings.Trim(fragments[0], " ")
 	schema := strings.Trim(fragments[1], " ")
 	table := strings.Trim(fragments[2], " ")
-
 	if len(share) == 0 || len(schema) == 0 || len(table) == 0 {
 		fmt.Println("Invalid URL:", url)
 		return "", "", "", ""
@@ -57,16 +52,21 @@ func _ParseURL(url string) (string, string, string, string) {
 
 func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
 	profile, shareStr, schemaStr, tableStr := _ParseURL(url)
-	s := NewSharingClient(context.Background(), profile)
+	s, err := NewSharingClient(context.Background(), profile)
+	if err != nil {
+		return nil, err
+	}
 	t := Table{Share: shareStr, Schema: schemaStr, Name: tableStr}
-	lf, _ := s.RestClient.ListFilesInTable(t)
+	lf, err := s.RestClient.ListFilesInTable(t)
+	if err != nil {
+		return nil, err
+	}
 	parquetFile, err := http.NewHttpReader(lf.AddFiles[0].Url, false, false, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
 	ctx := context.Background()
 	df, err := imports.LoadFromParquet(ctx, parquetFile)
-
 	if err != nil {
 		return nil, err
 	}
@@ -78,10 +78,13 @@ type SharingClient struct {
 	RestClient *DeltaSharingRestClient
 }
 
-func NewSharingClient(Ctx context.Context, ProfileFile string) *SharingClient {
-	p := NewDeltaSharingProfile(ProfileFile)
+func NewSharingClient(Ctx context.Context, ProfileFile string) (*SharingClient, error) {
+	p, err := NewDeltaSharingProfile(ProfileFile)
+	if err != nil {
+		return nil, err
+	}
 	r := NewDeltaSharingRestClient(Ctx, p, 0)
-	return &SharingClient{Profile: p, RestClient: r}
+	return &SharingClient{Profile: p, RestClient: r}, err
 }
 
 func (s *SharingClient) ListShares() ([]Share, error) {
@@ -109,6 +112,5 @@ func (s *SharingClient) ListAllTables() ([]Table, error) {
 		x, _ := s.RestClient.ListAllTables(v, 0, "")
 		ctl = append(ctl, x.Tables...)
 	}
-
 	return ctl, err
 }

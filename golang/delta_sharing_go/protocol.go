@@ -20,9 +20,7 @@ package delta_sharing
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 )
 
@@ -36,19 +34,13 @@ type DeltaSharingProfile struct {
 	ExpirationTime          string `json:"expirationTime"`
 }
 
-func NewDeltaSharingProfile(filename string) *DeltaSharingProfile {
+func NewDeltaSharingProfile(filename string) (*DeltaSharingProfile, error) {
 	d := DeltaSharingProfile{}
 	err := d.ReadFromFile(filename)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-
-	x, err := json.MarshalIndent(d, "", "    ")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Printf("response: %+v\n", string(x))
-	return &d
+	return &d, err
 }
 
 func (p *DeltaSharingProfile) ReadFromFile(path string) error {
@@ -61,9 +53,7 @@ func (p *DeltaSharingProfile) ReadFromFile(path string) error {
 	if err != nil {
 		return err
 	}
-
 	return json.Unmarshal(msg, p)
-
 }
 
 /*
