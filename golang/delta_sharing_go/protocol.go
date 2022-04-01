@@ -143,3 +143,8 @@ type Table struct {
 	Share  string `json:"share"`
 	Schema string `json:"schema"`
 }
+
+type Data struct {
+	PredicateHints []string `json:"predicateHints"`
+	LimitHint      int      `json:"limitHint"`
+}
