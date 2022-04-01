@@ -20,6 +20,7 @@ package delta_sharing
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -32,6 +33,7 @@ type DeltaSharingProfile struct {
 	ShareCredentialsVersion int    `json:"shareCredentialsVersion"`
 	Endpoint                string `json:"endpoint"`
 	BearerToken             string `json:"bearerToken"`
+	ExpirationTime          string `json:"expirationTime"`
 }
 
 func NewDeltaSharingProfile(filename string) *DeltaSharingProfile {
