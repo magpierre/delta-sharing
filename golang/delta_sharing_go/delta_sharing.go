@@ -63,12 +63,22 @@ func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
 	}
 	parquetFile, err := http.NewHttpReader(lf.AddFiles[0].Url, false, false, map[string]string{})
 	if err != nil {
-		return nil, err
+		return nil, &DeltaSharingError{
+			Module:       "delta_sharing.go",
+			Method:       "LoadAsDataFrame",
+			Operation:    "http.NewHttpReader(lf.AddFiles[0].Url, false, false, map[string]string{})",
+			ErrorMessage: err.Error(),
+		}
 	}
 	ctx := context.Background()
 	df, err := imports.LoadFromParquet(ctx, parquetFile)
 	if err != nil {
-		return nil, err
+		return nil, &DeltaSharingError{
+			Module:       "delta_sharing.go",
+			Method:       "LoadAsDataFrame",
+			Operation:    "imports.LoadFromParquet(ctx, parquetFile)",
+			ErrorMessage: err.Error(),
+		}
 	}
 	return df, err
 }
@@ -109,7 +119,10 @@ func (s *SharingClient) ListAllTables() ([]Table, error) {
 	}
 	var ctl []Table
 	for _, v := range shares.Shares {
-		x, _ := s.RestClient.ListAllTables(v, 0, "")
+		x, err := s.RestClient.ListAllTables(v, 0, "")
+		if err != nil {
+			return nil, err
+		}
 		ctl = append(ctl, x.Tables...)
 	}
 	return ctl, err

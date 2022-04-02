@@ -20,9 +20,21 @@ package delta_sharing
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 )
+
+type DeltaSharingError struct {
+	Module       string
+	Method       string
+	Operation    string
+	ErrorMessage string
+}
+
+func (e *DeltaSharingError) Error() string {
+	return fmt.Sprintf("Error -> Module:%s, Method:%s, Operation:%s, Error: %s\n", e.Module, e.Method, e.Operation, e.ErrorMessage)
+}
 
 /*
 	DeltaSharingProfile Object
@@ -38,7 +50,12 @@ func NewDeltaSharingProfile(filename string) (*DeltaSharingProfile, error) {
 	d := DeltaSharingProfile{}
 	err := d.ReadFromFile(filename)
 	if err != nil {
-		return nil, err
+		return nil, &DeltaSharingError{
+			Module:       "protocol.go",
+			Method:       "NewDeltaSharingProfile",
+			Operation:    "d.ReadFromFile(filename)",
+			ErrorMessage: err.Error(),
+		}
 	}
 	return &d, err
 }
