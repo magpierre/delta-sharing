@@ -70,6 +70,19 @@ func NewDeltaSharingRestClient(ctx context.Context, profile *DeltaSharingProfile
 	return &DeltaSharingRestClient{Profile: profile, NumRetries: numRetries, Ctx: ctx}
 }
 
+func (d *DeltaSharingRestClient) ReadFileReader(url string) (*bytes.Reader, error) {
+
+	r, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	b, err := ioutil.ReadAll(r.Body)
+	br := bytes.NewReader(b)
+
+	return br, err
+
+}
+
 func (d *DeltaSharingRestClient) callSharingServer(request string) (*[][]byte, error) {
 	var responses [][]byte
 	rawUrl := d.Profile.Endpoint + request
@@ -86,22 +99,23 @@ func (d *DeltaSharingRestClient) callSharingServer(request string) (*[][]byte, e
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "callSharingServer",
-			Operation:    "http.DefaultClient.Do(req)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "callSharingServer",
+			Call: "http.DefaultClient.Do",
+			Msg:  err.Error(),
 		}
 	}
+	defer response.Body.Close()
 	s := bufio.NewScanner(response.Body)
 	for s.Scan() {
 		responses = append(responses, s.Bytes())
 	}
 	if err := s.Err(); err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "callSharingServer",
-			Operation:    "s.Scan()",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "callSharingServer",
+			Call: "s.Scan",
+			Msg:  err.Error(),
 		}
 	}
 	return &responses, err
@@ -118,42 +132,26 @@ func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string,
 			"Authorization": {"Bearer " + d.Profile.BearerToken},
 		},
 	}
-	/*
-		reqDump, err := httputil.DumpRequestOut(req, true)
-		if err != nil {
-			log.Println(err)
-		}
-
-		log.Printf("REQUEST:\n%s", string(reqDump))
-	*/
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "callSharingServerWithParameters",
-			Operation:    "http.DefaultClient.Do(req)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "callSharingServerWithParameters",
+			Call: "http.DefaultClient.Do",
+			Msg:  err.Error(),
 		}
 	}
-	/*
-		respDump, err := httputil.DumpResponse(response, true)
-		if err != nil {
-			log.Println(err)
-		}
-
-		log.Printf("RESPONSE:\n%s", string(respDump))
-	*/
-
+	defer response.Body.Close()
 	s := bufio.NewScanner(response.Body)
 	for s.Scan() {
 		responses = append(responses, s.Bytes())
 	}
 	if err := s.Err(); err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "callSharingServerWithParameters",
-			Operation:    "s.Scan()",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "callSharingServerWithParameters",
+			Call: "s.Scan",
+			Msg:  err.Error(),
 		}
 	}
 	return &responses, err
@@ -163,10 +161,10 @@ func (d *DeltaSharingRestClient) getResponseHeader(request string) (map[string][
 	url, err := url.Parse(d.Profile.Endpoint + request)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "getResponseHeader",
-			Operation:    "url.Parse(d.Profile.Endpoint + request)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "getResponseHeader",
+			Call: "url.Parse",
+			Msg:  err.Error(),
 		}
 	}
 	req := &http.Request{
@@ -180,10 +178,10 @@ func (d *DeltaSharingRestClient) getResponseHeader(request string) (map[string][
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "getResponseHeader",
-			Operation:    "http.DefaultClient.Do(req)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "getResponseHeader",
+			Call: "http.DefaultClient.Do",
+			Msg:  err.Error(),
 		}
 	}
 	return response.Header, err
@@ -195,18 +193,18 @@ func (c DeltaSharingRestClient) ListShares(maxResult int, pageToken string) (*Li
 	rd, err := c.callSharingServerWithParameters(url, maxResult, pageToken)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListShares",
-			Operation:    "c.callSharingServerWithParameters(url, maxResult, pageToken)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListShares",
+			Call: "c.callSharingServerWithParameters",
+			Msg:  err.Error(),
 		}
 	}
 	if len(*rd) < 1 {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListShares",
-			Operation:    "c.callSharingServerWithParameters(url, maxResult, pageToken)",
-			ErrorMessage: "array returned is too short",
+			Mod:  "rest_client.go",
+			Func: "ListShares",
+			Call: "c.callSharingServerWithParameters",
+			Msg:  "array returned is too short",
 		}
 	}
 	var shares []Share
@@ -214,10 +212,10 @@ func (c DeltaSharingRestClient) ListShares(maxResult int, pageToken string) (*Li
 	err = json.Unmarshal((*rd)[0], &share)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListShares",
-			Operation:    "json.Unmarshal((*rd)[0], &share))",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListShares",
+			Call: "json.Unmarshal",
+			Msg:  err.Error(),
 		}
 	}
 	shares = append(shares, share.Items...)
@@ -230,18 +228,18 @@ func (c DeltaSharingRestClient) ListSchemas(share Share, maxResult int, pageToke
 	rd, err := c.callSharingServerWithParameters(url, maxResult, pageToken)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListSchemas",
-			Operation:    "c.callSharingServerWithParameters(url, maxResult, pageToken)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListSchemas",
+			Call: "c.callSharingServerWithParameters",
+			Msg:  err.Error(),
 		}
 	}
 	if len(*rd) < 1 {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListSchemas",
-			Operation:    "c.callSharingServerWithParameters(url, maxResult, pageToken)",
-			ErrorMessage: "array returned is too short",
+			Mod:  "rest_client.go",
+			Func: "ListSchemas",
+			Call: "c.callSharingServerWithParameters",
+			Msg:  "array returned is too short",
 		}
 	}
 	var schemas []Schema
@@ -249,10 +247,10 @@ func (c DeltaSharingRestClient) ListSchemas(share Share, maxResult int, pageToke
 	err = json.Unmarshal((*rd)[0], &schema)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListSchemas",
-			Operation:    "json.Unmarshal((*rd)[0], &schema)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListSchemas",
+			Call: "json.Unmarshal",
+			Msg:  err.Error(),
 		}
 	}
 	schemas = append(schemas, schema.Items...)
@@ -264,18 +262,18 @@ func (c DeltaSharingRestClient) ListTables(schema Schema, maxResult int, pageTok
 	rd, err := c.callSharingServerWithParameters(url, maxResult, pageToken)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListTables",
-			Operation:    "c.callSharingServerWithParameters(url, maxResult, pageToken)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListTables",
+			Call: "c.callSharingServerWithParameters",
+			Msg:  err.Error(),
 		}
 	}
 	if len(*rd) < 1 {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListTables",
-			Operation:    "c.callSharingServerWithParameters(url, maxResult, pageToken)",
-			ErrorMessage: "Invalid length of array",
+			Mod:  "rest_client.go",
+			Func: "ListTables",
+			Call: "c.callSharingServerWithParameters",
+			Msg:  "Invalid length of array",
 		}
 	}
 	var table ProtoTable
@@ -283,10 +281,10 @@ func (c DeltaSharingRestClient) ListTables(schema Schema, maxResult int, pageTok
 	err = json.Unmarshal((*rd)[0], &table)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListTables",
-			Operation:    "json.Unmarshal((*rd)[0], &table)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListTables",
+			Call: "json.Unmarshal",
+			Msg:  err.Error(),
 		}
 	}
 	tables = append(tables, table.Items...)
@@ -298,18 +296,18 @@ func (c DeltaSharingRestClient) ListAllTables(share Share, maxResult int, pageTo
 	rd, err := c.callSharingServerWithParameters(url, maxResult, pageToken)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListAllTables",
-			Operation:    "c.callSharingServerWithParameters(url, maxResult, pageToken)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListAllTables",
+			Call: "c.callSharingServerWithParameters",
+			Msg:  err.Error(),
 		}
 	}
 	if len(*rd) < 2 {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListAllTables",
-			Operation:    "len(*rd) < 2",
-			ErrorMessage: "array returned is too short",
+			Mod:  "rest_client.go",
+			Func: "ListAllTables",
+			Call: "len(*rd)",
+			Msg:  "array returned is too short",
 		}
 	}
 	var tables []Table
@@ -317,10 +315,10 @@ func (c DeltaSharingRestClient) ListAllTables(share Share, maxResult int, pageTo
 	err = json.Unmarshal((*rd)[0], &p)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListAllTables",
-			Operation:    "json.Unmarshal((*rd)[0], &p)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListAllTables",
+			Call: "json.Unmarshal",
+			Msg:  err.Error(),
 		}
 	}
 	for _, v := range (*rd)[1:] {
@@ -328,10 +326,10 @@ func (c DeltaSharingRestClient) ListAllTables(share Share, maxResult int, pageTo
 		err = json.Unmarshal(v, &table)
 		if err != nil {
 			return nil, &DeltaSharingError{
-				Module:       "rest_client.go",
-				Method:       "ListAllTables",
-				Operation:    "json.Unmarshal(v, &table)",
-				ErrorMessage: err.Error(),
+				Mod:  "rest_client.go",
+				Func: "ListAllTables",
+				Call: "json.Unmarshal",
+				Msg:  err.Error(),
 			}
 		}
 		tables = append(tables, table)
@@ -342,32 +340,40 @@ func (c DeltaSharingRestClient) ListAllTables(share Share, maxResult int, pageTo
 func (c DeltaSharingRestClient) QueryTableMetadata(table Table) (*QueryTableMetadataReponse, error) {
 	url := "/shares/" + table.Share + "/schemas/" + table.Schema + "/tables/" + table.Name + "/metadata"
 	rd, err := c.callSharingServer(url)
-	if err != nil {
+	if err != nil || rd == nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "QueryTableMetadata",
-			Operation:    "c.callSharingServer(url)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "QueryTableMetadata",
+			Call: "c.callSharingServer",
+			Msg:  err.Error(),
 		}
 	}
 	var metadata Metadata
 	var p Protocol
+	if len(*rd) != 2 {
+		return nil, &DeltaSharingError{
+			Mod:  "rest_client.go",
+			Func: "QueryTableMetadata",
+			Call: "len(*rd)",
+			Msg:  "",
+		}
+	}
 	err = json.Unmarshal((*rd)[0], &p)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "QueryTableMetadata",
-			Operation:    "json.Unmarshal((*rd)[0], &p)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "QueryTableMetadata",
+			Call: "json.Unmarshal",
+			Msg:  err.Error(),
 		}
 	}
 	err = json.Unmarshal((*rd)[1], &metadata)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "QueryTableMetadata",
-			Operation:    "json.Unmarshal((*rd)[1], &metadata)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "QueryTableMetadata",
+			Call: "json.Unmarshal",
+			Msg:  err.Error(),
 		}
 	}
 	return &QueryTableMetadataReponse{Metadata: metadata, Protocol: p}, err
@@ -376,21 +382,21 @@ func (c DeltaSharingRestClient) QueryTableMetadata(table Table) (*QueryTableMeta
 func (c DeltaSharingRestClient) QueryTableVersion(table Table) (*QueryTableVersionResponse, error) {
 	rawUrl := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name
 	r, err := c.getResponseHeader(rawUrl)
-	if err != nil {
+	if err != nil || r == nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "QueryTableVersion",
-			Operation:    "c.getResponseHeader(rawUrl)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "QueryTableVersion",
+			Call: "c.getResponseHeader",
+			Msg:  err.Error(),
 		}
 	}
 	i, err := strconv.Atoi(r["Delta-Table-Version"][0])
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "QueryTableVersion",
-			Operation:    "strconv.Atoi(r[\"Delta-Table-Version\"][0])",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "QueryTableVersion",
+			Call: "strconv.Atoi",
+			Msg:  err.Error(),
 		}
 	}
 	return &QueryTableVersionResponse{DeltaTableVersion: i}, err
@@ -399,20 +405,20 @@ func (c DeltaSharingRestClient) QueryTableVersion(table Table) (*QueryTableVersi
 func (c *DeltaSharingRestClient) ListFilesInTable(table Table) (*ListFilesInTableResponse, error) {
 	url := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name + "/query"
 	rd, err := c.postQuery(url, []string{""}, 0)
-	if err != nil {
+	if err != nil || rd == nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListFilesInTable",
-			Operation:    "c.postQuery(url, []string{\"\"}, 0)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListFilesInTable",
+			Call: "c.postQuery",
+			Msg:  err.Error(),
 		}
 	}
 	if len(*rd) < 3 {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListFilesInTable",
-			Operation:    "len(*rd) < 3",
-			ErrorMessage: "Array returned is too short",
+			Mod:  "rest_client.go",
+			Func: "ListFilesInTable",
+			Call: "len(*rd)",
+			Msg:  "Array returned is too short",
 		}
 	}
 	var p Protocol
@@ -421,19 +427,19 @@ func (c *DeltaSharingRestClient) ListFilesInTable(table Table) (*ListFilesInTabl
 	err = json.Unmarshal((*rd)[0], &p)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListFilesInTable",
-			Operation:    "json.Unmarshal((*rd)[0], &p)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListFilesInTable",
+			Call: "json.Unmarshal",
+			Msg:  err.Error(),
 		}
 	}
 	err = json.Unmarshal((*rd)[1], &m)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "ListFilesInTable",
-			Operation:    "json.Unmarshal((*rd)[1], &m)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "ListFilesInTable",
+			Call: "json.Unmarshal",
+			Msg:  err.Error(),
 		}
 	}
 	l := ListFilesInTableResponse{Protocol: p, Metadata: m}
@@ -444,10 +450,10 @@ func (c *DeltaSharingRestClient) ListFilesInTable(table Table) (*ListFilesInTabl
 		err = json.Unmarshal(v, &f)
 		if err != nil {
 			return nil, &DeltaSharingError{
-				Module:       "rest_client.go",
-				Method:       "ListFilesInTable",
-				Operation:    "json.Unmarshal(v, &f)",
-				ErrorMessage: err.Error(),
+				Mod:  "rest_client.go",
+				Func: "ListFilesInTable",
+				Call: "json.Unmarshal",
+				Msg:  err.Error(),
 			}
 		}
 		l.AddFiles = append(l.AddFiles, f.File)
@@ -461,22 +467,22 @@ func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []stri
 	var responses [][]byte
 	data := Data{PredicateHints: predicateHints, LimitHint: limitHint}
 	msg, err := json.Marshal(data)
-	if err != nil {
+	if err != nil || msg == nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "postQuery",
-			Operation:    "json.Marshal(data)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "postQuery",
+			Call: "json.Marshal",
+			Msg:  err.Error(),
 		}
 	}
 	reqBody := ioutil.NopCloser(strings.NewReader(string(msg)))
 	url, err := url.Parse(rawURL)
-	if err != nil {
+	if err != nil || url == nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "postQuery",
-			Operation:    "url.Parse(rawURL)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "postQuery",
+			Call: "url.Parse",
+			Msg:  err.Error(),
 		}
 	}
 	req := &http.Request{
@@ -489,21 +495,22 @@ func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []stri
 		Body: reqBody,
 	}
 	response, err := http.DefaultClient.Do(req)
-	if err != nil {
+	if err != nil || response == nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "postQuery",
-			Operation:    "http.DefaultClient.Do(req)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "postQuery",
+			Call: "http.DefaultClient.Do",
+			Msg:  err.Error(),
 		}
 	}
+	defer response.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(response.Body)
-	if err != nil {
+	if err != nil || bodyBytes == nil {
 		return nil, &DeltaSharingError{
-			Module:       "rest_client.go",
-			Method:       "postQuery",
-			Operation:    "ioutil.ReadAll(response.Body)",
-			ErrorMessage: err.Error(),
+			Mod:  "rest_client.go",
+			Func: "postQuery",
+			Call: "ioutil.ReadAll",
+			Msg:  err.Error(),
 		}
 	}
 	x := bytes.Split(bodyBytes, []byte{'\n'})
