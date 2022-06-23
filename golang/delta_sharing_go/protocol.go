@@ -20,20 +20,22 @@ package delta_sharing
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 type DeltaSharingError struct {
-	Module       string
-	Method       string
-	Operation    string
-	ErrorMessage string
+	Mod  string
+	Func string
+	Call string
+	Msg  string
 }
 
 func (e *DeltaSharingError) Error() string {
-	return fmt.Sprintf("Error -> Module:%s, Method:%s, Operation:%s, Error: %s\n", e.Module, e.Method, e.Operation, e.ErrorMessage)
+	return fmt.Sprintf("\nError -> Mod:%s, Func:%s, Call:%s, Msg: %s\n", e.Mod, e.Func, e.Call, e.Msg)
 }
 
 /*
@@ -51,10 +53,10 @@ func NewDeltaSharingProfile(filename string) (*DeltaSharingProfile, error) {
 	err := d.ReadFromFile(filename)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "protocol.go",
-			Method:       "NewDeltaSharingProfile",
-			Operation:    "d.ReadFromFile(filename)",
-			ErrorMessage: err.Error(),
+			Mod:  "protocol.go",
+			Func: "NewDeltaSharingProfile",
+			Call: "d.ReadFromFile(filename)",
+			Msg:  err.Error(),
 		}
 	}
 	return &d, err
@@ -93,6 +95,17 @@ type Format struct {
 /*
 	Metadata Object
 */
+type SparkField struct {
+	Name     string
+	Nullable bool
+	Type     interface{}
+	Metadata interface{}
+}
+
+type SparkSchema struct {
+	Type   string
+	Fields []SparkField
+}
 
 type Metadata struct {
 	Metadata struct {
@@ -103,6 +116,15 @@ type Metadata struct {
 		SchemaString     string   `json:"schemaString"`
 		PartitionColumns []string `json:"partitionColumns"`
 	}
+}
+
+func (M *Metadata) GetSparkSchema() (*SparkSchema, error) {
+	var sparkSchema SparkSchema
+	err := json.Unmarshal([]byte(M.Metadata.SchemaString), &sparkSchema)
+	if err != nil {
+		return nil, err
+	}
+	return &sparkSchema, nil
 }
 
 /*
@@ -118,6 +140,25 @@ type File struct {
 	PartitionValues map[string]string `json:"partitionValues"`
 	Size            float32           `json:"size"`
 	Stats           string            `json:"stats"`
+}
+
+func (F *File) GetStats() (*Stats, error) {
+	var s Stats
+	if len(strings.Trim(F.Stats, " ")) == 0 {
+		return nil, errors.New("Stats empty")
+	}
+	err := json.Unmarshal([]byte(F.Stats), &s)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+type Stats struct {
+	NumRecords int64
+	MinValues  map[string]interface{}
+	MaxValues  map[string]interface{}
+	NullCount  map[string]interface{}
 }
 
 type ProtoShare struct {
