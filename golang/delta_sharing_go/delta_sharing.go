@@ -20,9 +20,14 @@ package delta_sharing
 
 import (
 	"context"
+
 	"fmt"
 	"strings"
 
+	arrow "github.com/apache/arrow/go/v8/arrow"
+	"github.com/apache/arrow/go/v8/arrow/memory"
+	"github.com/apache/arrow/go/v8/parquet"
+	"github.com/apache/arrow/go/v8/parquet/pqarrow"
 	"github.com/rocketlaunchr/dataframe-go"
 	"github.com/rocketlaunchr/dataframe-go/imports"
 	"github.com/xitongsys/parquet-go-source/http"
@@ -58,29 +63,59 @@ func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
 	}
 	t := Table{Share: shareStr, Schema: schemaStr, Name: tableStr}
 	lf, err := s.RestClient.ListFilesInTable(t)
-	if err != nil {
+	if err != nil || lf == nil {
 		return nil, err
 	}
-	parquetFile, err := http.NewHttpReader(lf.AddFiles[0].Url, false, false, map[string]string{})
+	pf, err := http.NewHttpReader(lf.AddFiles[0].Url, false, false, map[string]string{})
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "delta_sharing.go",
-			Method:       "LoadAsDataFrame",
-			Operation:    "http.NewHttpReader(lf.AddFiles[0].Url, false, false, map[string]string{})",
-			ErrorMessage: err.Error(),
+			Mod:  "delta_sharing.go",
+			Func: "LoadAsDataFrame",
+			Call: "http.NewHttpReader",
+			Msg:  err.Error(),
 		}
 	}
 	ctx := context.Background()
-	df, err := imports.LoadFromParquet(ctx, parquetFile)
+	df, err := imports.LoadFromParquet(ctx, pf)
 	if err != nil {
 		return nil, &DeltaSharingError{
-			Module:       "delta_sharing.go",
-			Method:       "LoadAsDataFrame",
-			Operation:    "imports.LoadFromParquet(ctx, parquetFile)",
-			ErrorMessage: err.Error(),
+			Mod:  "delta_sharing.go",
+			Func: "LoadAsDataFrame",
+			Call: "imports.LoadFromParquet",
+			Msg:  err.Error(),
 		}
 	}
 	return df, err
+}
+
+func LoadAsArrowTable(url string) (arrow.Table, error) {
+	profile, shareStr, schemaStr, tableStr := _ParseURL(url)
+	s, err := NewSharingClient(context.Background(), profile)
+	if err != nil {
+		return nil, err
+	}
+	t := Table{Share: shareStr, Schema: schemaStr, Name: tableStr}
+	lf, err := s.RestClient.ListFilesInTable(t)
+	if err != nil {
+		return nil, err
+	}
+
+	pf, err := s.RestClient.ReadFileReader(lf.AddFiles[0].Url)
+	if err != nil {
+		return nil, err
+	}
+	mem := memory.NewGoAllocator()
+	pa, err := pqarrow.ReadTable(context.Background(), pf, parquet.NewReaderProperties(nil), pqarrow.ArrowReadProperties{}, mem)
+	if err != nil {
+		return nil, &DeltaSharingError{
+			Mod:  "delta_sharing.go",
+			Func: "LoadAsArrowTable",
+			Call: "pqarrow.ReadTable",
+			Msg:  err.Error(),
+		}
+	}
+
+	return pa, err
 }
 
 type SharingClient struct {
@@ -89,41 +124,69 @@ type SharingClient struct {
 }
 
 func NewSharingClient(Ctx context.Context, ProfileFile string) (*SharingClient, error) {
+
 	p, err := NewDeltaSharingProfile(ProfileFile)
-	if err != nil {
-		return nil, err
+	if err != nil || p == nil {
+		return nil, &DeltaSharingError{
+			Mod:  "delta_sharing.go",
+			Func: "NewSharingClient",
+			Call: "NewDeltaSharingProfile",
+			Msg:  "Could not create DeltaSharingProfile",
+		}
 	}
 	r := NewDeltaSharingRestClient(Ctx, p, 0)
+	if r == nil {
+		return nil, &DeltaSharingError{
+			Mod:  "delta_sharing.go",
+			Func: "NewSharingClient",
+			Call: "NewDeltaSharingRestClient",
+			Msg:  "Could not create DeltaSharingRestClient",
+		}
+	}
 	return &SharingClient{Profile: p, RestClient: r}, err
 }
 
 func (s *SharingClient) ListShares() ([]Share, error) {
-	shares, err := s.RestClient.ListShares(0, "")
-	return shares.Shares, err
+	sh, err := s.RestClient.ListShares(0, "")
+	if err != nil || sh == nil {
+		return nil, &DeltaSharingError{
+			Mod:  "delta_sharing.go",
+			Func: "ListShares",
+			Call: "s.RestClient.ListShares",
+			Msg:  "Could not list shares",
+		}
+	}
+	return sh.Shares, err
 }
 
 func (s *SharingClient) ListSchemas(share Share) ([]Schema, error) {
-	schemas, err := s.RestClient.ListSchemas(share, 0, "")
-	return schemas.Schemas, err
+	sc, err := s.RestClient.ListSchemas(share, 0, "")
+	if err != nil || sc == nil {
+		return nil, err
+	}
+	return sc.Schemas, err
 }
 
 func (s *SharingClient) ListTables(schema Schema) ([]Table, error) {
-	tables, err := s.RestClient.ListTables(schema, 0, "")
-	return tables.Tables, err
+	t, err := s.RestClient.ListTables(schema, 0, "")
+	if err != nil || t == nil {
+		return nil, err
+	}
+	return t.Tables, err
 }
 
 func (s *SharingClient) ListAllTables() ([]Table, error) {
-	shares, err := s.RestClient.ListShares(0, "")
-	if err != nil {
+	sh, err := s.RestClient.ListShares(0, "")
+	if err != nil || sh == nil {
 		return nil, err
 	}
-	var ctl []Table
-	for _, v := range shares.Shares {
+	var tl []Table
+	for _, v := range sh.Shares {
 		x, err := s.RestClient.ListAllTables(v, 0, "")
-		if err != nil {
+		if err != nil || x == nil {
 			return nil, err
 		}
-		ctl = append(ctl, x.Tables...)
+		tl = append(tl, x.Tables...)
 	}
-	return ctl, err
+	return tl, err
 }
