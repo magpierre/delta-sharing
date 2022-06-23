@@ -56,6 +56,8 @@ func _ParseURL(url string) (string, string, string, string) {
 }
 
 func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
+	pkg := "delta_sharing.go"
+	fn := "LoadAsDataFrame"
 	profile, shareStr, schemaStr, tableStr := _ParseURL(url)
 	s, err := NewSharingClient(context.Background(), profile)
 	if err != nil {
@@ -68,27 +70,19 @@ func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
 	}
 	pf, err := http.NewHttpReader(lf.AddFiles[0].Url, false, false, map[string]string{})
 	if err != nil {
-		return nil, &DeltaSharingError{
-			Mod:  "delta_sharing.go",
-			Func: "LoadAsDataFrame",
-			Call: "http.NewHttpReader",
-			Msg:  err.Error(),
-		}
+		return nil, &DSErr{pkg, fn, "http.NewHttpReader", err.Error()}
 	}
 	ctx := context.Background()
 	df, err := imports.LoadFromParquet(ctx, pf)
 	if err != nil {
-		return nil, &DeltaSharingError{
-			Mod:  "delta_sharing.go",
-			Func: "LoadAsDataFrame",
-			Call: "imports.LoadFromParquet",
-			Msg:  err.Error(),
-		}
+		return nil, &DSErr{pkg, fn, "imports.LoadFromParquet", err.Error()}
 	}
 	return df, err
 }
 
 func LoadAsArrowTable(url string) (arrow.Table, error) {
+	pkg := "delta_sharing.go"
+	fn := "LoadAsDataFrame"
 	profile, shareStr, schemaStr, tableStr := _ParseURL(url)
 	s, err := NewSharingClient(context.Background(), profile)
 	if err != nil {
@@ -107,12 +101,7 @@ func LoadAsArrowTable(url string) (arrow.Table, error) {
 	mem := memory.NewGoAllocator()
 	pa, err := pqarrow.ReadTable(context.Background(), pf, parquet.NewReaderProperties(nil), pqarrow.ArrowReadProperties{}, mem)
 	if err != nil {
-		return nil, &DeltaSharingError{
-			Mod:  "delta_sharing.go",
-			Func: "LoadAsArrowTable",
-			Call: "pqarrow.ReadTable",
-			Msg:  err.Error(),
-		}
+		return nil, &DSErr{pkg, fn, "pqarrow.ReadTable", err.Error()}
 	}
 
 	return pa, err
@@ -124,37 +113,25 @@ type SharingClient struct {
 }
 
 func NewSharingClient(Ctx context.Context, ProfileFile string) (*SharingClient, error) {
-
+	pkg := "delta_sharing.go"
+	fn := "NewSharingClient"
 	p, err := NewDeltaSharingProfile(ProfileFile)
 	if err != nil || p == nil {
-		return nil, &DeltaSharingError{
-			Mod:  "delta_sharing.go",
-			Func: "NewSharingClient",
-			Call: "NewDeltaSharingProfile",
-			Msg:  "Could not create DeltaSharingProfile",
-		}
+		return nil, &DSErr{pkg, fn, "NewDeltaSharingProfile", "Could not create DeltaSharingProfile"}
 	}
 	r := NewDeltaSharingRestClient(Ctx, p, 0)
 	if r == nil {
-		return nil, &DeltaSharingError{
-			Mod:  "delta_sharing.go",
-			Func: "NewSharingClient",
-			Call: "NewDeltaSharingRestClient",
-			Msg:  "Could not create DeltaSharingRestClient",
-		}
+		return nil, &DSErr{pkg, fn, "NewDeltaSharingRestClient", "Could not create DeltaSharingRestClient"}
 	}
 	return &SharingClient{Profile: p, RestClient: r}, err
 }
 
 func (s *SharingClient) ListShares() ([]Share, error) {
+	pkg := "delta_sharing.go"
+	fn := "ListShares"
 	sh, err := s.RestClient.ListShares(0, "")
 	if err != nil || sh == nil {
-		return nil, &DeltaSharingError{
-			Mod:  "delta_sharing.go",
-			Func: "ListShares",
-			Call: "s.RestClient.ListShares",
-			Msg:  "Could not list shares",
-		}
+		return nil, &DSErr{pkg, fn, "s.RestClient.ListShares", "Could not list shares"}
 	}
 	return sh.Shares, err
 }

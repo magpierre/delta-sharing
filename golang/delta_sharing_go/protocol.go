@@ -27,15 +27,15 @@ import (
 	"strings"
 )
 
-type DeltaSharingError struct {
+type DSErr struct {
 	Mod  string
 	Func string
 	Call string
 	Msg  string
 }
 
-func (e *DeltaSharingError) Error() string {
-	return fmt.Sprintf("\nError -> Mod:%s, Func:%s, Call:%s, Msg: %s\n", e.Mod, e.Func, e.Call, e.Msg)
+func (e *DSErr) Error() string {
+	return fmt.Sprintf("\nErr: Mod:%s, Func:%s, Call:%s, Msg: %s\n", e.Mod, e.Func, e.Call, e.Msg)
 }
 
 /*
@@ -49,15 +49,12 @@ type DeltaSharingProfile struct {
 }
 
 func NewDeltaSharingProfile(filename string) (*DeltaSharingProfile, error) {
+	pkg := "protocol.go"
+	fn := "NewDeltaSharingProfile"
 	d := DeltaSharingProfile{}
 	err := d.ReadFromFile(filename)
 	if err != nil {
-		return nil, &DeltaSharingError{
-			Mod:  "protocol.go",
-			Func: "NewDeltaSharingProfile",
-			Call: "d.ReadFromFile(filename)",
-			Msg:  err.Error(),
-		}
+		return nil, &DSErr{pkg, fn, "d.ReadFromFile", err.Error()}
 	}
 	return &d, err
 }
