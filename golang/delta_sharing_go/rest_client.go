@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -126,10 +127,24 @@ func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string,
 			"Authorization": {"Bearer " + d.Profile.BearerToken},
 		},
 	}
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, &DSErr{pkg, fn, "http.DefaultClient.Do", err.Error()}
+	var response *http.Response
+	var retryCnt = 0
+	var err error
+
+	for {
+		response, err = http.DefaultClient.Do(req)
+		if err != nil {
+			if retryCnt <= d.NumRetries && d.shouldRetry(response) == true {
+				retryCnt++
+				continue
+			}
+
+			return nil, &DSErr{pkg, fn, "http.DefaultClient.Do", err.Error()}
+		} else {
+			break
+		}
 	}
+
 	defer response.Body.Close()
 	s := bufio.NewScanner(response.Body)
 	for s.Scan() {
@@ -156,9 +171,21 @@ func (d *DeltaSharingRestClient) getResponseHeader(request string) (map[string][
 			"Authorization": {"Bearer " + d.Profile.BearerToken},
 		},
 	}
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, &DSErr{pkg, fn, "http.DefaultClient.Do", err.Error()}
+	var response *http.Response
+	var retryCnt = 0
+
+	for {
+		response, err = http.DefaultClient.Do(req)
+		if err != nil {
+			if retryCnt <= d.NumRetries && d.shouldRetry(response) == true {
+				retryCnt++
+				continue
+			}
+
+			return nil, &DSErr{pkg, fn, "http.DefaultClient.Do", err.Error()}
+		} else {
+			break
+		}
 	}
 	return response.Header, err
 }
@@ -357,10 +384,24 @@ func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []stri
 		},
 		Body: reqBody,
 	}
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, &DSErr{pkg, fn, "http.DefaultClient.Do", err.Error()}
+
+	var response *http.Response
+	var retryCnt = 0
+
+	for {
+		response, err = http.DefaultClient.Do(req)
+		if err != nil {
+			if retryCnt <= c.NumRetries && c.shouldRetry(response) == true {
+				retryCnt++
+				continue
+			}
+
+			return nil, &DSErr{pkg, fn, "http.DefaultClient.Do", err.Error()}
+		} else {
+			break
+		}
 	}
+
 	defer response.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -371,4 +412,23 @@ func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []stri
 		responses = append(responses, v)
 	}
 	return &responses, err
+}
+
+func (c *DeltaSharingRestClient) shouldRetry(r *http.Response) bool {
+
+	if r == nil {
+		fmt.Println("Retry connection due to error")
+		return true
+	}
+	if r.StatusCode == 429 {
+		fmt.Println("Retry operation due to status code: 429")
+		return true
+	} else if r.StatusCode >= 500 && r.StatusCode < 600 {
+		fmt.Printf("Retry operation due to status code: %d\n", r.StatusCode)
+		return true
+	} else {
+		return false
+	}
+
+	return false
 }
