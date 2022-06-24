@@ -20,6 +20,7 @@ package delta_sharing
 
 import (
 	"context"
+	"errors"
 
 	"fmt"
 	"strings"
@@ -80,9 +81,9 @@ func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
 	return df, err
 }
 
-func LoadAsArrowTable(url string) (arrow.Table, error) {
+func LoadAsArrowTable(url string, fileno int) (arrow.Table, error) {
 	pkg := "delta_sharing.go"
-	fn := "LoadAsDataFrame"
+	fn := "LoadAsArrowTable"
 	profile, shareStr, schemaStr, tableStr := _ParseURL(url)
 	s, err := NewSharingClient(context.Background(), profile)
 	if err != nil {
@@ -94,7 +95,10 @@ func LoadAsArrowTable(url string) (arrow.Table, error) {
 		return nil, err
 	}
 
-	pf, err := s.RestClient.ReadFileReader(lf.AddFiles[0].Url)
+	if fileno > len(lf.AddFiles) || fileno < 0 {
+		return nil, errors.New("Invalid index")
+	}
+	pf, err := s.RestClient.ReadFileReader(lf.AddFiles[fileno].Url)
 	if err != nil {
 		return nil, err
 	}
