@@ -19,7 +19,6 @@
 package delta_sharing
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -56,7 +55,7 @@ type queryTableVersionResponse struct {
 }
 type listFilesInTableResponse struct {
 	Protocol protocol
-	Metadata metadata
+	Metadata protometadata
 	AddFiles []file
 }
 
@@ -104,12 +103,15 @@ func (d *deltaSharingRestClient) callSharingServer(request string) (*[][]byte, e
 		return nil, &DSErr{pkg, fn, "http.DefaultClient.Do", err.Error()}
 	}
 	defer response.Body.Close()
-	s := bufio.NewScanner(response.Body)
-	for s.Scan() {
-		responses = append(responses, s.Bytes())
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, &DSErr{pkg, fn, "ioutil.ReadAll", err.Error()}
 	}
-	if err := s.Err(); err != nil {
-		return nil, &DSErr{pkg, fn, "s.Scan", err.Error()}
+	x := bytes.Split(bodyBytes, []byte{'\n'})
+	for _, v := range x {
+		if len(v) > 0 {
+			responses = append(responses, v)
+		}
 	}
 	return &responses, err
 }
@@ -146,13 +148,17 @@ func (d *deltaSharingRestClient) callSharingServerWithParameters(request string,
 	}
 
 	defer response.Body.Close()
-	s := bufio.NewScanner(response.Body)
-	for s.Scan() {
-		responses = append(responses, s.Bytes())
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, &DSErr{pkg, fn, "ioutil.ReadAll", err.Error()}
 	}
-	if err := s.Err(); err != nil {
-		return nil, &DSErr{pkg, fn, "s.Scan", err.Error()}
+	x := bytes.Split(bodyBytes, []byte{'\n'})
+	for _, v := range x {
+		if len(v) > 0 {
+			responses = append(responses, v)
+		}
 	}
+
 	return &responses, err
 }
 
@@ -331,7 +337,7 @@ func (c *deltaSharingRestClient) ListFilesInTable(table table) (*listFilesInTabl
 		return nil, &DSErr{pkg, fn, "len(*rd)", "Array returned is too short"}
 	}
 	var p protocol
-	var m metadata
+	var m protometadata
 	var f protoFile
 	err = json.Unmarshal((*rd)[0], &p)
 	if err != nil {
