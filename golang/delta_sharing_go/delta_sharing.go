@@ -174,10 +174,18 @@ func (s *sharingClient) ListFilesInTable(t table) (*listFilesInTableResponse, er
 	return s.restClient.ListFilesInTable(t)
 }
 
-func (s *sharingClient) GetTableVersion(t table) (*queryTableVersionResponse, error) {
-	return s.restClient.QueryTableVersion(t)
+func (s *sharingClient) GetTableVersion(t table) (int, error) {
+	v, err := s.restClient.QueryTableVersion(t)
+	if err != nil {
+		return -1, err
+	}
+	return v.DeltaTableVersion, nil
 }
 
-func (s *sharingClient) GetTableMetadata(t table) (*queryTableMetadataReponse, error) {
-	return s.restClient.QueryTableMetadata(t)
+func (s *sharingClient) GetTableMetadata(t table) (*metadata, error) {
+	m, err := s.restClient.QueryTableMetadata(t)
+	if err != nil {
+		return nil, err
+	}
+	return &m.Metadata, nil
 }
