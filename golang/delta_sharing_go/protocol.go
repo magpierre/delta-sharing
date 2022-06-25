@@ -105,17 +105,19 @@ type sparkSchema struct {
 }
 
 type metadata struct {
-	Metadata struct {
-		Id               string `json:"id"`
-		Name             string `json:"name"`
-		Description      string `json:"description"`
-		Format           format
-		SchemaString     string   `json:"schemaString"`
-		PartitionColumns []string `json:"partitionColumns"`
-	}
+	Id               string `json:"id"`
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	Format           format
+	SchemaString     string   `json:"schemaString"`
+	PartitionColumns []string `json:"partitionColumns"`
 }
 
-func (M *metadata) GetSparkSchema() (*sparkSchema, error) {
+type protometadata struct {
+	Metadata metadata
+}
+
+func (M *protometadata) GetSparkSchema() (*sparkSchema, error) {
 	var sparkSchema sparkSchema
 	err := json.Unmarshal([]byte(M.Metadata.SchemaString), &sparkSchema)
 	if err != nil {
