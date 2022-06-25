@@ -32,46 +32,46 @@ import (
 )
 
 /* Response types */
-type ListSharesResponse struct {
-	Shares []Share
+type listSharesResponse struct {
+	Shares []share
 }
-type ListSchemasResponse struct {
-	Schemas       []Schema
+type listSchemasResponse struct {
+	Schemas       []schema
 	NextPageToken string
 }
-type ListTablesResponse struct {
-	Tables        []Table
+type listTablesResponse struct {
+	Tables        []table
 	NextPageToken string
 }
-type ListAllTablesResponse struct {
-	Tables        []Table
+type listAllTablesResponse struct {
+	Tables        []table
 	NextPageToken string
 }
-type QueryTableMetadataReponse struct {
-	Protocol Protocol
-	Metadata Metadata
+type queryTableMetadataReponse struct {
+	Protocol protocol
+	Metadata metadata
 }
-type QueryTableVersionResponse struct {
+type queryTableVersionResponse struct {
 	DeltaTableVersion int
 }
-type ListFilesInTableResponse struct {
-	Protocol Protocol
-	Metadata Metadata
-	AddFiles []File
+type listFilesInTableResponse struct {
+	Protocol protocol
+	Metadata metadata
+	AddFiles []file
 }
 
-type DeltaSharingRestClient struct {
-	Profile    *DeltaSharingProfile
-	NumRetries int
-	Ctx        context.Context
+type deltaSharingRestClient struct {
+	profile    *deltaSharingProfile
+	numRetries int
+	ctx        context.Context
 }
 
 /* Constructor for the DeltaSharingRestClient */
-func NewDeltaSharingRestClient(ctx context.Context, profile *DeltaSharingProfile, numRetries int) *DeltaSharingRestClient {
-	return &DeltaSharingRestClient{Profile: profile, NumRetries: numRetries, Ctx: ctx}
+func newDeltaSharingRestClient(ctx context.Context, profile *deltaSharingProfile, numRetries int) *deltaSharingRestClient {
+	return &deltaSharingRestClient{profile: profile, numRetries: numRetries, ctx: ctx}
 }
 
-func (d *DeltaSharingRestClient) ReadFileReader(url string) (*bytes.Reader, error) {
+func (d *deltaSharingRestClient) readFileReader(url string) (*bytes.Reader, error) {
 
 	r, err := http.Get(url)
 	if err != nil {
@@ -84,11 +84,11 @@ func (d *DeltaSharingRestClient) ReadFileReader(url string) (*bytes.Reader, erro
 
 }
 
-func (d *DeltaSharingRestClient) callSharingServer(request string) (*[][]byte, error) {
+func (d *deltaSharingRestClient) callSharingServer(request string) (*[][]byte, error) {
 	pkg := "rest_client.go"
 	fn := "callSharingServer"
 	var responses [][]byte
-	rawUrl := d.Profile.Endpoint + request
+	rawUrl := d.profile.Endpoint + request
 	urlval, _ := url.Parse(rawUrl)
 
 	req := &http.Request{
@@ -96,7 +96,7 @@ func (d *DeltaSharingRestClient) callSharingServer(request string) (*[][]byte, e
 		URL:    urlval,
 		Header: map[string][]string{
 			"Content-Type":  {"application/json; charset=UTF-8"},
-			"Authorization": {"Bearer " + d.Profile.BearerToken},
+			"Authorization": {"Bearer " + d.profile.BearerToken},
 		},
 	}
 	response, err := http.DefaultClient.Do(req)
@@ -113,18 +113,18 @@ func (d *DeltaSharingRestClient) callSharingServer(request string) (*[][]byte, e
 	}
 	return &responses, err
 }
-func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string, maxResult int, pageToken string) (*[][]byte, error) {
+func (d *deltaSharingRestClient) callSharingServerWithParameters(request string, maxResult int, pageToken string) (*[][]byte, error) {
 	pkg := "rest_client.go"
 	fn := "callSharingServerWithParameters"
 	var responses [][]byte
-	rawUrl := d.Profile.Endpoint + request
+	rawUrl := d.profile.Endpoint + request
 	urlval, _ := url.Parse(rawUrl)
 	req := &http.Request{
 		Method: "GET",
 		URL:    urlval,
 		Header: map[string][]string{
 			"Content-Type":  {"application/json; charset=UTF-8"},
-			"Authorization": {"Bearer " + d.Profile.BearerToken},
+			"Authorization": {"Bearer " + d.profile.BearerToken},
 		},
 	}
 	var response *http.Response
@@ -134,7 +134,7 @@ func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string,
 	for {
 		response, err = http.DefaultClient.Do(req)
 		if err != nil {
-			if retryCnt <= d.NumRetries && d.shouldRetry(response) == true {
+			if retryCnt <= d.numRetries && d.shouldRetry(response) == true {
 				retryCnt++
 				continue
 			}
@@ -156,10 +156,10 @@ func (d *DeltaSharingRestClient) callSharingServerWithParameters(request string,
 	return &responses, err
 }
 
-func (d *DeltaSharingRestClient) getResponseHeader(request string) (map[string][]string, error) {
+func (d *deltaSharingRestClient) getResponseHeader(request string) (map[string][]string, error) {
 	pkg := "rest_client.go"
 	fn := "getResponseHeader"
-	url, err := url.Parse(d.Profile.Endpoint + request)
+	url, err := url.Parse(d.profile.Endpoint + request)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "url.Parse", err.Error()}
 	}
@@ -168,7 +168,7 @@ func (d *DeltaSharingRestClient) getResponseHeader(request string) (map[string][
 		URL:    url,
 		Header: map[string][]string{
 			"Content-Type":  {"application/json; charset=UTF-8"},
-			"Authorization": {"Bearer " + d.Profile.BearerToken},
+			"Authorization": {"Bearer " + d.profile.BearerToken},
 		},
 	}
 	var response *http.Response
@@ -177,7 +177,7 @@ func (d *DeltaSharingRestClient) getResponseHeader(request string) (map[string][
 	for {
 		response, err = http.DefaultClient.Do(req)
 		if err != nil {
-			if retryCnt <= d.NumRetries && d.shouldRetry(response) == true {
+			if retryCnt <= d.numRetries && d.shouldRetry(response) == true {
 				retryCnt++
 				continue
 			}
@@ -190,7 +190,7 @@ func (d *DeltaSharingRestClient) getResponseHeader(request string) (map[string][
 	return response.Header, err
 }
 
-func (c DeltaSharingRestClient) ListShares(maxResult int, pageToken string) (*ListSharesResponse, error) {
+func (c deltaSharingRestClient) ListShares(maxResult int, pageToken string) (*listSharesResponse, error) {
 	pkg := "rest_client.go"
 	fn := "ListShares"
 	// TODO Add support for parameters
@@ -200,20 +200,20 @@ func (c DeltaSharingRestClient) ListShares(maxResult int, pageToken string) (*Li
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "c.callSharingServerWithParameters", err.Error()}
 	}
-	if len(*rd) < 1 {
+	if rd == nil || len(*rd) < 1 {
 		return nil, &DSErr{pkg, fn, "c.callSharingServerWithParameters", "array returned is too short"}
 	}
-	var shares []Share
-	var share ProtoShare
+	var shares []share
+	var share protoShare
 	err = json.Unmarshal((*rd)[0], &share)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
 	shares = append(shares, share.Items...)
-	return &ListSharesResponse{Shares: shares}, err
+	return &listSharesResponse{Shares: shares}, err
 }
 
-func (c DeltaSharingRestClient) ListSchemas(share Share, maxResult int, pageToken string) (*ListSchemasResponse, error) {
+func (c deltaSharingRestClient) ListSchemas(share share, maxResult int, pageToken string) (*listSchemasResponse, error) {
 	pkg := "rest_client.go"
 	fn := "ListSchemas"
 	// TODO Add support for parameters
@@ -222,20 +222,20 @@ func (c DeltaSharingRestClient) ListSchemas(share Share, maxResult int, pageToke
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "c.callSharingServerWithParameters", err.Error()}
 	}
-	if len(*rd) < 1 {
+	if rd == nil || len(*rd) < 1 {
 		return nil, &DSErr{pkg, fn, "c.callSharingServerWithParameters", "array returned is too short"}
 	}
-	var schemas []Schema
-	var schema ProtoSchema
+	var schemas []schema
+	var schema protoSchema
 	err = json.Unmarshal((*rd)[0], &schema)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
 	schemas = append(schemas, schema.Items...)
-	return &ListSchemasResponse{Schemas: schemas}, err
+	return &listSchemasResponse{Schemas: schemas}, err
 }
 
-func (c DeltaSharingRestClient) ListTables(schema Schema, maxResult int, pageToken string) (*ListTablesResponse, error) {
+func (c deltaSharingRestClient) ListTables(schema schema, maxResult int, pageToken string) (*listTablesResponse, error) {
 	pkg := "rest_client.go"
 	fn := "ListTables"
 	url := "/shares/" + schema.Share + "/schemas/" + schema.Name + "/tables"
@@ -243,20 +243,20 @@ func (c DeltaSharingRestClient) ListTables(schema Schema, maxResult int, pageTok
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "c.callSharingServerWithParameters", err.Error()}
 	}
-	if len(*rd) < 1 {
+	if rd == nil || len(*rd) < 1 {
 		return nil, &DSErr{pkg, fn, "c.callSharingServerWithParameters", "Invalid length of array"}
 	}
-	var table ProtoTable
-	var tables []Table
-	err = json.Unmarshal((*rd)[0], &table)
+	var tbl protoTable
+	var tables []table
+	err = json.Unmarshal((*rd)[0], &tbl)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
-	tables = append(tables, table.Items...)
-	return &ListTablesResponse{Tables: tables}, err
+	tables = append(tables, tbl.Items...)
+	return &listTablesResponse{Tables: tables}, err
 }
 
-func (c DeltaSharingRestClient) ListAllTables(share Share, maxResult int, pageToken string) (*ListAllTablesResponse, error) {
+func (c deltaSharingRestClient) ListAllTables(share share, maxResult int, pageToken string) (*listAllTablesResponse, error) {
 	pkg := "rest_client.go"
 	fn := "ListAllTables"
 	url := "/shares/" + share.Name + "/all-tables"
@@ -264,27 +264,23 @@ func (c DeltaSharingRestClient) ListAllTables(share Share, maxResult int, pageTo
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "c.callSharingServerWithParameters", err.Error()}
 	}
-	if len(*rd) < 2 {
+	if rd == nil || len(*rd) < 1 {
 		return nil, &DSErr{pkg, fn, "len(*rd)", "array returned is too short"}
 	}
-	var tables []Table
-	var p Protocol
-	err = json.Unmarshal((*rd)[0], &p)
-	if err != nil {
-		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
-	}
-	for _, v := range (*rd)[1:] {
-		table := Table{}
+	var tables []table
+	var table protoTable
+
+	for _, v := range (*rd)[0:] {
 		err = json.Unmarshal(v, &table)
 		if err != nil {
 			return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 		}
-		tables = append(tables, table)
+		tables = append(tables, table.Items...)
 	}
-	return &ListAllTablesResponse{Tables: tables}, err
+	return &listAllTablesResponse{Tables: tables}, err
 }
 
-func (c DeltaSharingRestClient) QueryTableMetadata(table Table) (*QueryTableMetadataReponse, error) {
+func (c deltaSharingRestClient) QueryTableMetadata(table table) (*queryTableMetadataReponse, error) {
 	pkg := "rest_client.go"
 	fn := "QueryTableMetadata"
 	url := "/shares/" + table.Share + "/schemas/" + table.Schema + "/tables/" + table.Name + "/metadata"
@@ -292,8 +288,8 @@ func (c DeltaSharingRestClient) QueryTableMetadata(table Table) (*QueryTableMeta
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "c.callSharingServer", err.Error()}
 	}
-	var metadata Metadata
-	var p Protocol
+	var metadata metadata
+	var p protocol
 	if len(*rd) != 2 {
 		return nil, &DSErr{pkg, fn, "len(*rd)", ""}
 	}
@@ -305,10 +301,10 @@ func (c DeltaSharingRestClient) QueryTableMetadata(table Table) (*QueryTableMeta
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
-	return &QueryTableMetadataReponse{Metadata: metadata, Protocol: p}, err
+	return &queryTableMetadataReponse{Metadata: metadata, Protocol: p}, err
 }
 
-func (c DeltaSharingRestClient) QueryTableVersion(table Table) (*QueryTableVersionResponse, error) {
+func (c deltaSharingRestClient) QueryTableVersion(table table) (*queryTableVersionResponse, error) {
 	pkg := "rest_client.go"
 	fn := "QueryTableVersion"
 	rawUrl := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name
@@ -320,10 +316,10 @@ func (c DeltaSharingRestClient) QueryTableVersion(table Table) (*QueryTableVersi
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "strconv.Atoi", err.Error()}
 	}
-	return &QueryTableVersionResponse{DeltaTableVersion: i}, err
+	return &queryTableVersionResponse{DeltaTableVersion: i}, err
 }
 
-func (c *DeltaSharingRestClient) ListFilesInTable(table Table) (*ListFilesInTableResponse, error) {
+func (c *deltaSharingRestClient) ListFilesInTable(table table) (*listFilesInTableResponse, error) {
 	pkg := "rest_client.go"
 	fn := "ListFilesInTable"
 	url := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name + "/query"
@@ -331,12 +327,12 @@ func (c *DeltaSharingRestClient) ListFilesInTable(table Table) (*ListFilesInTabl
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "c.postQuery", err.Error()}
 	}
-	if len(*rd) < 3 {
+	if rd == nil || len(*rd) < 3 {
 		return nil, &DSErr{pkg, fn, "len(*rd)", "Array returned is too short"}
 	}
-	var p Protocol
-	var m Metadata
-	var f ProtoFile
+	var p protocol
+	var m metadata
+	var f protoFile
 	err = json.Unmarshal((*rd)[0], &p)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
@@ -345,7 +341,7 @@ func (c *DeltaSharingRestClient) ListFilesInTable(table Table) (*ListFilesInTabl
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
-	l := ListFilesInTableResponse{Protocol: p, Metadata: m}
+	l := listFilesInTableResponse{Protocol: p, Metadata: m}
 	for _, v := range (*rd)[2:] {
 		if len(v) == 0 {
 			continue
@@ -359,13 +355,13 @@ func (c *DeltaSharingRestClient) ListFilesInTable(table Table) (*ListFilesInTabl
 	return &l, err
 }
 
-func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []string, limitHint int) (*[][]byte, error) {
+func (c *deltaSharingRestClient) postQuery(request string, predicateHints []string, limitHint int) (*[][]byte, error) {
 	pkg := "rest_client.go"
 	fn := "postQuery"
 	// create request body
-	rawURL := c.Profile.Endpoint + "/" + request
+	rawURL := c.profile.Endpoint + "/" + request
 	var responses [][]byte
-	data := Data{PredicateHints: predicateHints, LimitHint: limitHint}
+	data := data{PredicateHints: predicateHints, LimitHint: limitHint}
 	msg, err := json.Marshal(data)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Marshal", err.Error()}
@@ -380,7 +376,7 @@ func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []stri
 		URL:    url,
 		Header: map[string][]string{
 			"Content-Type":  {"application/json; charset=UTF-8"},
-			"Authorization": {"Bearer " + c.Profile.BearerToken},
+			"Authorization": {"Bearer " + c.profile.BearerToken},
 		},
 		Body: reqBody,
 	}
@@ -391,7 +387,7 @@ func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []stri
 	for {
 		response, err = http.DefaultClient.Do(req)
 		if err != nil {
-			if retryCnt <= c.NumRetries && c.shouldRetry(response) == true {
+			if retryCnt <= c.numRetries && c.shouldRetry(response) == true {
 				retryCnt++
 				continue
 			}
@@ -414,7 +410,7 @@ func (c *DeltaSharingRestClient) postQuery(request string, predicateHints []stri
 	return &responses, err
 }
 
-func (c *DeltaSharingRestClient) shouldRetry(r *http.Response) bool {
+func (c *deltaSharingRestClient) shouldRetry(r *http.Response) bool {
 
 	if r == nil {
 		fmt.Println("Retry connection due to error")
@@ -429,6 +425,4 @@ func (c *DeltaSharingRestClient) shouldRetry(r *http.Response) bool {
 	} else {
 		return false
 	}
-
-	return false
 }

@@ -41,17 +41,17 @@ func (e *DSErr) Error() string {
 /*
 	DeltaSharingProfile Object
 */
-type DeltaSharingProfile struct {
+type deltaSharingProfile struct {
 	ShareCredentialsVersion int    `json:"shareCredentialsVersion"`
 	Endpoint                string `json:"endpoint"`
 	BearerToken             string `json:"bearerToken"`
 	ExpirationTime          string `json:"expirationTime"`
 }
 
-func NewDeltaSharingProfile(filename string) (*DeltaSharingProfile, error) {
+func newDeltaSharingProfile(filename string) (*deltaSharingProfile, error) {
 	pkg := "protocol.go"
 	fn := "NewDeltaSharingProfile"
-	d := DeltaSharingProfile{}
+	d := deltaSharingProfile{}
 	err := d.ReadFromFile(filename)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "d.ReadFromFile", err.Error()}
@@ -59,7 +59,7 @@ func NewDeltaSharingProfile(filename string) (*DeltaSharingProfile, error) {
 	return &d, err
 }
 
-func (p *DeltaSharingProfile) ReadFromFile(path string) error {
+func (p *deltaSharingProfile) ReadFromFile(path string) error {
 	f, err := os.Open(path)
 	defer f.Close()
 	if err != nil {
@@ -75,7 +75,7 @@ func (p *DeltaSharingProfile) ReadFromFile(path string) error {
 /*
 	Protocol Object
 */
-type Protocol struct {
+type protocol struct {
 	Protocol struct {
 		MinReaderVersion int32 `json:"minReaderVersion"`
 	}
@@ -84,7 +84,7 @@ type Protocol struct {
 /*
 	Format Object
 */
-type Format struct {
+type format struct {
 	Type   string   `json:"type"`
 	Fields []string `json:"fields"`
 }
@@ -92,31 +92,31 @@ type Format struct {
 /*
 	Metadata Object
 */
-type SparkField struct {
+type sparkField struct {
 	Name     string
 	Nullable bool
 	Type     interface{}
 	Metadata interface{}
 }
 
-type SparkSchema struct {
+type sparkSchema struct {
 	Type   string
-	Fields []SparkField
+	Fields []sparkField
 }
 
-type Metadata struct {
+type metadata struct {
 	Metadata struct {
 		Id               string `json:"id"`
 		Name             string `json:"name"`
 		Description      string `json:"description"`
-		Format           Format
+		Format           format
 		SchemaString     string   `json:"schemaString"`
 		PartitionColumns []string `json:"partitionColumns"`
 	}
 }
 
-func (M *Metadata) GetSparkSchema() (*SparkSchema, error) {
-	var sparkSchema SparkSchema
+func (M *metadata) GetSparkSchema() (*sparkSchema, error) {
+	var sparkSchema sparkSchema
 	err := json.Unmarshal([]byte(M.Metadata.SchemaString), &sparkSchema)
 	if err != nil {
 		return nil, err
@@ -127,11 +127,11 @@ func (M *Metadata) GetSparkSchema() (*SparkSchema, error) {
 /*
 	File Object
 */
-type ProtoFile struct {
-	File File
+type protoFile struct {
+	File file
 }
 
-type File struct {
+type file struct {
 	Url             string            `json:"url"`
 	Id              string            `json:"id"`
 	PartitionValues map[string]string `json:"partitionValues"`
@@ -139,8 +139,8 @@ type File struct {
 	Stats           string            `json:"stats"`
 }
 
-func (F *File) GetStats() (*Stats, error) {
-	var s Stats
+func (F *file) GetStats() (*stats, error) {
+	var s stats
 	if len(strings.Trim(F.Stats, " ")) == 0 {
 		return nil, errors.New("Stats empty")
 	}
@@ -151,45 +151,45 @@ func (F *File) GetStats() (*Stats, error) {
 	return &s, nil
 }
 
-type Stats struct {
+type stats struct {
 	NumRecords int64
 	MinValues  map[string]interface{}
 	MaxValues  map[string]interface{}
 	NullCount  map[string]interface{}
 }
 
-type ProtoShare struct {
-	Items         []Share
+type protoShare struct {
+	Items         []share
 	NextPageToken string `json:"nextPageToken"`
 }
 
-type ProtoSchema struct {
-	Items         []Schema
+type protoSchema struct {
+	Items         []schema
 	NextPageToken string `json:"nextPageToken"`
 }
 
-type ProtoTable struct {
-	Items         []Table
+type protoTable struct {
+	Items         []table
 	NextPageToken string `json:"nextPageToken"`
 }
 
-type Share struct {
+type share struct {
 	Name string `json:"name"`
 	Id   string `json:"id"`
 }
 
-type Schema struct {
+type schema struct {
 	Name  string `json:"name"`
 	Share string `json:"share"`
 }
 
-type Table struct {
+type table struct {
 	Name   string `json:"name"`
 	Share  string `json:"share"`
 	Schema string `json:"schema"`
 }
 
-type Data struct {
+type data struct {
 	PredicateHints []string `json:"predicateHints"`
 	LimitHint      int      `json:"limitHint"`
 }
