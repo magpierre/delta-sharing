@@ -17,3 +17,45 @@
 */
 
 package delta_sharing
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestFile_GetStats(t *testing.T) {
+	type fields struct {
+		Url             string
+		Id              string
+		PartitionValues map[string]string
+		Size            float32
+		Stats           string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		want    *stats
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			F := &file{
+				Url:             tt.fields.Url,
+				Id:              tt.fields.Id,
+				PartitionValues: tt.fields.PartitionValues,
+				Size:            tt.fields.Size,
+				Stats:           tt.fields.Stats,
+			}
+			got, err := F.GetStats()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("File.GetStats() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("File.GetStats() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
