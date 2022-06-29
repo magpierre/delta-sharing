@@ -562,7 +562,7 @@ func Test_sharingClient_GetTableMetadata(t *testing.T) {
 				t.Errorf("sharingClient.GetTableMetadata() error = %s, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !reflect.DeepEqual(got.Id, tt.want) {
 				t.Errorf("sharingClient.ListFilesInTable() = %v, want %v", got, tt.want)
 			}
 		})
