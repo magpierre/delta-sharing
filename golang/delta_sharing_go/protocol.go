@@ -104,22 +104,26 @@ type sparkSchema struct {
 	Fields []sparkField
 }
 
+type protoFormat struct {
+	Provider string `json:"provider"`
+}
 type metadata struct {
-	Id               string `json:"id"`
-	Name             string `json:"name"`
-	Description      string `json:"description"`
-	Format           format
-	SchemaString     string   `json:"schemaString"`
-	PartitionColumns []string `json:"partitionColumns"`
+	Id               string            `json:"id"`
+	Name             string            `json:"name"`
+	Description      string            `json:"description"`
+	Format           protoFormat       `json:"format"`
+	SchemaString     string            `json:"schemaString"`
+	PartitionColumns []string          `json:"partitionColumns"`
+	Configuration    map[string]string `json:"configuration"`
 }
 
-type protometadata struct {
-	Metadata metadata
+type protoMetadata struct {
+	Metadata metadata `json:"metaData"`
 }
 
-func (M *protometadata) GetSparkSchema() (*sparkSchema, error) {
+func (M *metadata) GetSparkSchema() (*sparkSchema, error) {
 	var sparkSchema sparkSchema
-	err := json.Unmarshal([]byte(M.Metadata.SchemaString), &sparkSchema)
+	err := json.Unmarshal([]byte(M.SchemaString), &sparkSchema)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +142,9 @@ type file struct {
 	Id              string            `json:"id"`
 	PartitionValues map[string]string `json:"partitionValues"`
 	Size            float32           `json:"size"`
-	Stats           string            `json:"stats"`
+	Stats           string            `json:"stats,omitempty"`
+	Timestamp       float32           `json:"timestamp,omitempty"`
+	Version         int32             `json:"version,omitempty"`
 }
 
 func (F *file) GetStats() (*stats, error) {
