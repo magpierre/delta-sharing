@@ -123,6 +123,12 @@ func TestNewSharingClient(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name:    "test2",
+			args:    args{context.Background(), "/Users/magnuspierre/Documents/shares/open-dtasets.share.txt"},
+			want:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -131,10 +137,10 @@ func TestNewSharingClient(t *testing.T) {
 				t.Errorf("NewSharingClient() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(*got, *tt.want) {
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Log(&got)
 				t.Log(&tt.want)
-				t.Errorf("NewSharingClient() = %v, want %v", *got, *tt.want)
+				t.Errorf("NewSharingClient() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -168,6 +174,20 @@ func TestSharingClient_ListShares(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				RestClient: &deltaSharingRestClient{
+					profile: &deltaSharingProfile{
+						ShareCredentialsVersion: 1,
+						Endpoint:                "https://sharing.dela.io/delta-sharing/",
+						BearerToken:             "faaie590d541265bcab1f2de9813274bf233",
+						ExpirationTime:          "",
+					},
+				}},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 
@@ -226,6 +246,26 @@ func TestSharingClient_ListSchemas(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				RestClient: &deltaSharingRestClient{
+					profile: &deltaSharingProfile{
+						ShareCredentialsVersion: 1,
+						Endpoint:                "https://sharing.delta.i/delta-sharing/",
+						BearerToken:             "faaie590d541265bcab1f2de9813274bf233",
+						ExpirationTime:          "",
+					},
+					numRetries: 0,
+					ctx:        context.Background(),
+				},
+			},
+			args: args{
+				share: share{"delta_sharing", ""},
+			},
+			want:    nil,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -369,10 +409,29 @@ func Test_sharingClient_ListFilesInTable(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *listFilesInTableResponse
+		want    int
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "test1",
+			fields: fields{
+				restClient: &deltaSharingRestClient{
+					profile: &deltaSharingProfile{
+						ShareCredentialsVersion: 1,
+						Endpoint:                "https://sharing.delta.io/delta-sharing/",
+						BearerToken:             "faaie590d541265bcab1f2de9813274bf233",
+						ExpirationTime:          "",
+					},
+					numRetries: 0,
+					ctx:        context.Background(),
+				},
+			},
+			args: args{
+				t: table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
+			},
+			want:    1,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -384,7 +443,7 @@ func Test_sharingClient_ListFilesInTable(t *testing.T) {
 				t.Errorf("sharingClient.ListFilesInTable() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !reflect.DeepEqual(len(got.AddFiles), tt.want) {
 				t.Errorf("sharingClient.ListFilesInTable() = %v, want %v", got, tt.want)
 			}
 		})
@@ -405,7 +464,41 @@ func Test_sharingClient_GetTableVersion(t *testing.T) {
 		want    int
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "test1",
+			fields: fields{
+				restClient: &deltaSharingRestClient{
+					profile: &deltaSharingProfile{
+						ShareCredentialsVersion: 1,
+						Endpoint:                "https://sharing.delta.io/delta-sharing/",
+						BearerToken:             "faaie590d541265bcab1f2de9813274bf233",
+						ExpirationTime:          "",
+					},
+					numRetries: 0,
+					ctx:        context.Background(),
+				},
+			},
+			args: args{
+				t: table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
+			},
+			want:    0,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &sharingClient{
+				restClient: tt.fields.restClient,
+			}
+			got, err := s.GetTableVersion(tt.args.t)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("sharingClient.ListFilesInTable() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("sharingClient.ListFilesInTable() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -435,10 +528,29 @@ func Test_sharingClient_GetTableMetadata(t *testing.T) {
 		name    string
 		fields  _fields
 		args    args
-		want    *metadata
+		want    string
 		wantErr bool
 	}{
-		// tests to be defined
+		{
+			name: "test1",
+			fields: _fields{
+				restClient: &deltaSharingRestClient{
+					profile: &deltaSharingProfile{
+						ShareCredentialsVersion: 1,
+						Endpoint:                "https://sharing.delta.io/delta-sharing/",
+						BearerToken:             "faaie590d541265bcab1f2de9813274bf233",
+						ExpirationTime:          "",
+					},
+					numRetries: 0,
+					ctx:        context.Background(),
+				},
+			},
+			args: args{
+				t: table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
+			},
+			want:    "a76e5192-13de-406c-8af0-eb8d7803e80a",
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -447,11 +559,11 @@ func Test_sharingClient_GetTableMetadata(t *testing.T) {
 			}
 			got, err := s.GetTableMetadata(tt.args.t)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("sharingClient.GetTableMetadata() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("sharingClient.GetTableMetadata() error = %s, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sharingClient.GetTableMetadata() = %v, want %v", got, tt.want)
+				t.Errorf("sharingClient.ListFilesInTable() = %v, want %v", got, tt.want)
 			}
 		})
 	}
