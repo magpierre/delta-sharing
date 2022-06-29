@@ -55,8 +55,18 @@ type queryTableVersionResponse struct {
 }
 type listFilesInTableResponse struct {
 	Protocol protocol
-	Metadata protometadata
+	Metadata metadata
 	AddFiles []file
+}
+
+type listCdcFilesResponse struct {
+	Protocol protocol
+	Metadata metadata
+	Action   struct {
+		Add    []file
+		Cdc    []file
+		Remove []file
+	}
 }
 
 type deltaSharingRestClient struct {
@@ -294,7 +304,7 @@ func (c deltaSharingRestClient) QueryTableMetadata(table table) (*queryTableMeta
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "c.callSharingServer", err.Error()}
 	}
-	var metadata metadata
+	var metadata protoMetadata
 	var p protocol
 	if len(*rd) != 2 {
 		return nil, &DSErr{pkg, fn, "len(*rd)", ""}
@@ -303,11 +313,13 @@ func (c deltaSharingRestClient) QueryTableMetadata(table table) (*queryTableMeta
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
+
 	err = json.Unmarshal((*rd)[1], &metadata)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
-	return &queryTableMetadataReponse{Metadata: metadata, Protocol: p}, err
+	return &queryTableMetadataReponse{Metadata: metadata.Metadata, Protocol: p}, err
+
 }
 
 func (c deltaSharingRestClient) QueryTableVersion(table table) (*queryTableVersionResponse, error) {
@@ -337,7 +349,7 @@ func (c *deltaSharingRestClient) ListFilesInTable(table table) (*listFilesInTabl
 		return nil, &DSErr{pkg, fn, "len(*rd)", "Array returned is too short"}
 	}
 	var p protocol
-	var m protometadata
+	var m protoMetadata
 	var f protoFile
 	err = json.Unmarshal((*rd)[0], &p)
 	if err != nil {
@@ -347,7 +359,7 @@ func (c *deltaSharingRestClient) ListFilesInTable(table table) (*listFilesInTabl
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
-	l := listFilesInTableResponse{Protocol: p, Metadata: m}
+	l := listFilesInTableResponse{Protocol: p, Metadata: m.Metadata}
 	for _, v := range (*rd)[2:] {
 		if len(v) == 0 {
 			continue

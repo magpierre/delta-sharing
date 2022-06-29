@@ -62,8 +62,8 @@ func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := Table{Share: shareStr, Schema: schemaStr, Name: tableStr}
-	lf, err := s.RestClient.ListFilesInTable(t)
+	t := table{Share: shareStr, Schema: schemaStr, Name: tableStr}
+	lf, err := s.restClient.ListFilesInTable(t)
 	if err != nil || lf == nil {
 		return nil, err
 	}
@@ -72,6 +72,7 @@ func LoadAsDataFrame(url string) (*dataframe.DataFrame, error) {
 		return nil, &DSErr{pkg, fn, "http.NewHttpReader", err.Error()}
 	}
 	ctx := context.Background()
+
 	df, err := imports.LoadFromParquet(ctx, pf)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "imports.LoadFromParquet", err.Error()}
@@ -118,8 +119,8 @@ func NewSharingClient(Ctx context.Context, ProfileFile string) (*sharingClient, 
 	pkg := "delta_sharing.go"
 	fn := "NewSharingClient"
 	p, err := newDeltaSharingProfile(ProfileFile)
-	if err != nil || p == nil {
-		return nil, &DSErr{pkg, fn, "NewDeltaSharingProfile", "Could not create DeltaSharingProfile"}
+	if err != nil {
+		return nil, &DSErr{pkg, fn, "NewDeltaSharingProfile", err.Error()}
 	}
 	r := newDeltaSharingRestClient(Ctx, p, 5)
 	if r == nil {
@@ -132,15 +133,15 @@ func (s *sharingClient) ListShares() ([]share, error) {
 	pkg := "delta_sharing.go"
 	fn := "ListShares"
 	sh, err := s.restClient.ListShares(0, "")
-	if err != nil || sh == nil {
-		return nil, &DSErr{pkg, fn, "s.RestClient.ListShares", "Could not list shares"}
+	if err != nil {
+		return nil, &DSErr{pkg, fn, "s.RestClient.ListShares", err.Error()}
 	}
 	return sh.Shares, err
 }
 
 func (s *sharingClient) ListSchemas(share share) ([]schema, error) {
 	sc, err := s.restClient.ListSchemas(share, 0, "")
-	if err != nil || sc == nil {
+	if err != nil {
 		return nil, err
 	}
 	return sc.Schemas, err
@@ -148,7 +149,7 @@ func (s *sharingClient) ListSchemas(share share) ([]schema, error) {
 
 func (s *sharingClient) ListTables(schema schema) ([]table, error) {
 	t, err := s.restClient.ListTables(schema, 0, "")
-	if err != nil || t == nil {
+	if err != nil {
 		return nil, err
 	}
 	return t.Tables, err
@@ -156,13 +157,13 @@ func (s *sharingClient) ListTables(schema schema) ([]table, error) {
 
 func (s *sharingClient) ListAllTables() ([]table, error) {
 	sh, err := s.restClient.ListShares(0, "")
-	if err != nil || sh == nil {
+	if err != nil {
 		return nil, err
 	}
 	var tl []table
 	for _, v := range sh.Shares {
 		x, err := s.restClient.ListAllTables(v, 0, "")
-		if err != nil || x == nil {
+		if err != nil {
 			return nil, err
 		}
 		tl = append(tl, x.Tables...)
