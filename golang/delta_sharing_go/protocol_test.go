@@ -29,7 +29,7 @@ func TestFile_GetStats(t *testing.T) {
 		restClient *deltaSharingRestClient
 	}
 	type args struct {
-		t table
+		t Table
 	}
 	tests := []struct {
 		name    string
@@ -53,7 +53,7 @@ func TestFile_GetStats(t *testing.T) {
 				},
 			},
 			args: args{
-				t: table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
+				t: Table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
 			},
 			want: &stats{
 				NumRecords: 506,
@@ -78,7 +78,7 @@ func TestFile_GetStats(t *testing.T) {
 				},
 			},
 			args: args{
-				t: table{Name: "boston-hoing", Share: "delta_sharing", Schema: "default"},
+				t: Table{Name: "boston-hoing", Share: "delta_sharing", Schema: "default"},
 			},
 			want:    nil,
 			wantErr: true,

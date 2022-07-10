@@ -39,11 +39,11 @@ type listSchemasResponse struct {
 	NextPageToken string
 }
 type listTablesResponse struct {
-	Tables        []table
+	Tables        []Table
 	NextPageToken string
 }
 type listAllTablesResponse struct {
-	Tables        []table
+	Tables        []Table
 	NextPageToken string
 }
 type queryTableMetadataReponse struct {
@@ -56,16 +56,16 @@ type queryTableVersionResponse struct {
 type listFilesInTableResponse struct {
 	Protocol protocol
 	Metadata metadata
-	AddFiles []file
+	AddFiles []File
 }
 
 type listCdcFilesResponse struct {
 	Protocol protocol
 	Metadata metadata
 	Action   struct {
-		Add    []file
-		Cdc    []file
-		Remove []file
+		Add    []File
+		Cdc    []File
+		Remove []File
 	}
 }
 
@@ -263,7 +263,7 @@ func (c deltaSharingRestClient) ListTables(schema schema, maxResult int, pageTok
 		return nil, &DSErr{pkg, fn, "c.callSharingServerWithParameters", "Invalid length of array"}
 	}
 	var tbl protoTable
-	var tables []table
+	var tables []Table
 	err = json.Unmarshal((*rd)[0], &tbl)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
@@ -283,7 +283,7 @@ func (c deltaSharingRestClient) ListAllTables(share share, maxResult int, pageTo
 	if rd == nil || len(*rd) < 1 {
 		return nil, &DSErr{pkg, fn, "len(*rd)", "array returned is too short"}
 	}
-	var tables []table
+	var tables []Table
 	var table protoTable
 
 	for _, v := range (*rd)[0:] {
@@ -296,7 +296,7 @@ func (c deltaSharingRestClient) ListAllTables(share share, maxResult int, pageTo
 	return &listAllTablesResponse{Tables: tables}, err
 }
 
-func (c deltaSharingRestClient) QueryTableMetadata(table table) (*queryTableMetadataReponse, error) {
+func (c deltaSharingRestClient) QueryTableMetadata(table Table) (*queryTableMetadataReponse, error) {
 	pkg := "rest_client.go"
 	fn := "QueryTableMetadata"
 	url := "/shares/" + table.Share + "/schemas/" + table.Schema + "/tables/" + table.Name + "/metadata"
@@ -322,7 +322,7 @@ func (c deltaSharingRestClient) QueryTableMetadata(table table) (*queryTableMeta
 
 }
 
-func (c deltaSharingRestClient) QueryTableVersion(table table) (*queryTableVersionResponse, error) {
+func (c deltaSharingRestClient) QueryTableVersion(table Table) (*queryTableVersionResponse, error) {
 	pkg := "rest_client.go"
 	fn := "QueryTableVersion"
 	rawUrl := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name
@@ -337,7 +337,7 @@ func (c deltaSharingRestClient) QueryTableVersion(table table) (*queryTableVersi
 	return &queryTableVersionResponse{DeltaTableVersion: i}, err
 }
 
-func (c *deltaSharingRestClient) ListFilesInTable(table table) (*listFilesInTableResponse, error) {
+func (c *deltaSharingRestClient) ListFilesInTable(table Table) (*listFilesInTableResponse, error) {
 	pkg := "rest_client.go"
 	fn := "ListFilesInTable"
 	url := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name + "/query"

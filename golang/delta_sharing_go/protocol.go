@@ -134,10 +134,10 @@ func (M *metadata) GetSparkSchema() (*sparkSchema, error) {
 	File Object
 */
 type protoFile struct {
-	File file
+	File File
 }
 
-type file struct {
+type File struct {
 	Url             string            `json:"url"`
 	Id              string            `json:"id"`
 	PartitionValues map[string]string `json:"partitionValues"`
@@ -147,7 +147,7 @@ type file struct {
 	Version         int32             `json:"version,omitempty"`
 }
 
-func (F *file) GetStats() (*stats, error) {
+func (F *File) GetStats() (*stats, error) {
 	var s stats
 	if len(strings.Trim(F.Stats, " ")) == 0 {
 		return nil, errors.New("Stats empty")
@@ -177,7 +177,7 @@ type protoSchema struct {
 }
 
 type protoTable struct {
-	Items         []table
+	Items         []Table
 	NextPageToken string `json:"nextPageToken"`
 }
 
@@ -191,7 +191,7 @@ type schema struct {
 	Share string `json:"share"`
 }
 
-type table struct {
+type Table struct {
 	Name   string `json:"name"`
 	Share  string `json:"share"`
 	Schema string `json:"schema"`

@@ -296,7 +296,7 @@ func TestSharingClient_ListTables(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    []table
+		want    []Table
 		wantErr bool
 	}{
 		{
@@ -316,7 +316,7 @@ func TestSharingClient_ListTables(t *testing.T) {
 			args: args{
 				schema: schema{"default", "delta_sharing"},
 			},
-			want: []table{
+			want: []Table{
 				{Name: "COVID_19_NYT", Share: "delta_sharing", Schema: "default"},
 				{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
 				{Name: "flight-asa_2008", Share: "delta_sharing", Schema: "default"},
@@ -352,7 +352,7 @@ func TestSharingClient_ListAllTables(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		want    []table
+		want    []Table
 		wantErr bool
 	}{
 		{
@@ -369,7 +369,7 @@ func TestSharingClient_ListAllTables(t *testing.T) {
 					ctx:        context.Background(),
 				},
 			},
-			want: []table{
+			want: []Table{
 				{Name: "COVID_19_NYT", Share: "delta_sharing", Schema: "default"},
 				{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
 				{Name: "flight-asa_2008", Share: "delta_sharing", Schema: "default"},
@@ -403,7 +403,7 @@ func Test_sharingClient_ListFilesInTable(t *testing.T) {
 		restClient *deltaSharingRestClient
 	}
 	type args struct {
-		t table
+		t Table
 	}
 	tests := []struct {
 		name    string
@@ -427,7 +427,7 @@ func Test_sharingClient_ListFilesInTable(t *testing.T) {
 				},
 			},
 			args: args{
-				t: table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
+				t: Table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
 			},
 			want:    1,
 			wantErr: false,
@@ -455,7 +455,7 @@ func Test_sharingClient_GetTableVersion(t *testing.T) {
 		restClient *deltaSharingRestClient
 	}
 	type args struct {
-		t table
+		t Table
 	}
 	tests := []struct {
 		name    string
@@ -479,7 +479,7 @@ func Test_sharingClient_GetTableVersion(t *testing.T) {
 				},
 			},
 			args: args{
-				t: table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
+				t: Table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
 			},
 			want:    0,
 			wantErr: false,
@@ -522,7 +522,7 @@ func Test_sharingClient_GetTableMetadata(t *testing.T) {
 		restClient *deltaSharingRestClient
 	}
 	type args struct {
-		t table
+		t Table
 	}
 	tests := []struct {
 		name    string
@@ -546,7 +546,7 @@ func Test_sharingClient_GetTableMetadata(t *testing.T) {
 				},
 			},
 			args: args{
-				t: table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
+				t: Table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
 			},
 			want:    "a76e5192-13de-406c-8af0-eb8d7803e80a",
 			wantErr: false,

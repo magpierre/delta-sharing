@@ -425,7 +425,7 @@ func TestDeltaSharingRestClient_ListTables(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    []table
+		want    []Table
 		wantErr bool
 	}{
 		{
@@ -448,7 +448,7 @@ func TestDeltaSharingRestClient_ListTables(t *testing.T) {
 				maxResult: 0,
 				pageToken: "123456789",
 			},
-			want: []table{
+			want: []Table{
 				{Name: "COVID_19_NYT", Share: "delta_sharing", Schema: "default"},
 				{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
 				{Name: "flight-asa_2008", Share: "delta_sharing", Schema: "default"},
@@ -494,7 +494,7 @@ func TestDeltaSharingRestClient_ListAllTables(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    []table
+		want    []Table
 		wantErr bool
 	}{
 		{
@@ -516,7 +516,7 @@ func TestDeltaSharingRestClient_ListAllTables(t *testing.T) {
 				maxResult: 0,
 				pageToken: "123456789",
 			},
-			want: []table{
+			want: []Table{
 				{Name: "COVID_19_NYT", Share: "delta_sharing", Schema: "default"},
 				{Name: "boston-housing", Share: "delta_sharing", Schema: "default"},
 				{Name: "flight-asa_2008", Share: "delta_sharing", Schema: "default"},
@@ -554,7 +554,7 @@ func TestDeltaSharingRestClient_QueryTableVersion(t *testing.T) {
 		Ctx        context.Context
 	}
 	type args struct {
-		table table
+		table Table
 	}
 	tests := []struct {
 		name    string
@@ -566,7 +566,7 @@ func TestDeltaSharingRestClient_QueryTableVersion(t *testing.T) {
 		{
 			name:    "test1",
 			fields:  fields{Profile: &deltaSharingProfile{ShareCredentialsVersion: 1, Endpoint: "https://sharing.delta.io/delta-sharing/", BearerToken: "123456789", ExpirationTime: ""}, NumRetries: 5, Ctx: context.Background()},
-			args:    args{table: table{Name: "COVID_19_NYT", Share: "delta_sharing", Schema: "default"}},
+			args:    args{table: Table{Name: "COVID_19_NYT", Share: "delta_sharing", Schema: "default"}},
 			want:    0,
 			wantErr: false,
 		},
@@ -597,7 +597,7 @@ func TestDeltaSharingRestClient_ListFilesInTable(t *testing.T) {
 		Ctx        context.Context
 	}
 	type args struct {
-		table table
+		table Table
 	}
 	tests := []struct {
 		name    string
@@ -609,7 +609,7 @@ func TestDeltaSharingRestClient_ListFilesInTable(t *testing.T) {
 		{
 			name:    "test1",
 			fields:  fields{Profile: &deltaSharingProfile{ShareCredentialsVersion: 1, Endpoint: "https://sharing.delta.io/delta-sharing/", BearerToken: "123456789", ExpirationTime: ""}, NumRetries: 5, Ctx: context.Background()},
-			args:    args{table: table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"}},
+			args:    args{table: Table{Name: "boston-housing", Share: "delta_sharing", Schema: "default"}},
 			want:    27348,
 			wantErr: false,
 		},

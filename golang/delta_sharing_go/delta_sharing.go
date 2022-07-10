@@ -89,7 +89,7 @@ func LoadAsArrowTable(url string, fileno int) (arrow.Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := table{Share: shareStr, Schema: schemaStr, Name: tableStr}
+	t := Table{Share: shareStr, Schema: schemaStr, Name: tableStr}
 	lf, err := s.restClient.ListFilesInTable(t)
 	if err != nil {
 		return nil, err
@@ -108,6 +108,42 @@ func LoadAsArrowTable(url string, fileno int) (arrow.Table, error) {
 		return nil, &DSErr{pkg, fn, "pqarrow.ReadTable", err.Error()}
 	}
 
+	return pa, err
+}
+
+func LoadArrowTable(client interface{}, table Table, fileId string) (arrow.Table, error) {
+	pkg := "delta_sharing.go"
+	fn := "LoadArrowTable"
+	if client == nil {
+		return nil, &DSErr{pkg, fn, "client == nil", "Invalid client"}
+	}
+
+	f, err := client.(*sharingClient).restClient.ListFilesInTable(table)
+	if err != nil {
+		return nil, err
+	}
+	var urlValue *string
+
+	for _, v := range f.AddFiles {
+		if v.Id == fileId {
+			urlValue = &v.Url
+			break
+		}
+	}
+
+	if urlValue == nil {
+		return nil, &DSErr{pkg, fn, "v.Id == fileId", "fileid not found in table"}
+	}
+
+	pf, err := client.(*sharingClient).restClient.readFileReader(*urlValue)
+	if err != nil {
+		return nil, err
+	}
+	mem := memory.NewGoAllocator()
+	pa, err := pqarrow.ReadTable(context.Background(), pf, parquet.NewReaderProperties(nil), pqarrow.ArrowReadProperties{}, mem)
+	if err != nil {
+		return nil, &DSErr{pkg, fn, "pqarrow.ReadTable", err.Error()}
+	}
 	return pa, err
 }
 
@@ -147,7 +183,7 @@ func (s *sharingClient) ListSchemas(share share) ([]schema, error) {
 	return sc.Schemas, err
 }
 
-func (s *sharingClient) ListTables(schema schema) ([]table, error) {
+func (s *sharingClient) ListTables(schema schema) ([]Table, error) {
 	t, err := s.restClient.ListTables(schema, 0, "")
 	if err != nil {
 		return nil, err
@@ -155,12 +191,12 @@ func (s *sharingClient) ListTables(schema schema) ([]table, error) {
 	return t.Tables, err
 }
 
-func (s *sharingClient) ListAllTables() ([]table, error) {
+func (s *sharingClient) ListAllTables() ([]Table, error) {
 	sh, err := s.restClient.ListShares(0, "")
 	if err != nil {
 		return nil, err
 	}
-	var tl []table
+	var tl []Table
 	for _, v := range sh.Shares {
 		x, err := s.restClient.ListAllTables(v, 0, "")
 		if err != nil {
@@ -171,11 +207,11 @@ func (s *sharingClient) ListAllTables() ([]table, error) {
 	return tl, err
 }
 
-func (s *sharingClient) ListFilesInTable(t table) (*listFilesInTableResponse, error) {
+func (s *sharingClient) ListFilesInTable(t Table) (*listFilesInTableResponse, error) {
 	return s.restClient.ListFilesInTable(t)
 }
 
-func (s *sharingClient) GetTableVersion(t table) (int, error) {
+func (s *sharingClient) GetTableVersion(t Table) (int, error) {
 	v, err := s.restClient.QueryTableVersion(t)
 	if err != nil {
 		return -1, err
@@ -183,7 +219,7 @@ func (s *sharingClient) GetTableVersion(t table) (int, error) {
 	return v.DeltaTableVersion, nil
 }
 
-func (s *sharingClient) GetTableMetadata(t table) (*metadata, error) {
+func (s *sharingClient) GetTableMetadata(t Table) (*metadata, error) {
 	m, err := s.restClient.QueryTableMetadata(t)
 	if err != nil {
 		return nil, err
