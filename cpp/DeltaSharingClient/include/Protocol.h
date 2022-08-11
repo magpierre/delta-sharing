@@ -159,17 +159,6 @@ namespace DeltaSharing
             }
         };
 
-/*
-
- "metaData": {
-        "format": {
-            "provider": "parquet"
-        },
-        "id": "7245fd1d-8a6d-4988-af72-92a95b646511",
-        "partitionColumns": [],
-        "schemaString": "{\"type\":\"struct\",\"fields\":[{\"name\":\"date\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"county\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"state\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"fips\",\"type\":\"integer\",\"nullable\":true,\"metadata\":{}},{\"name\":\"cases\",\"type\":\"integer\",\"nullable\":true,\"metadata\":{}},{\"name\":\"deaths\",\"type\":\"integer\",\"nullable\":true,\"metadata\":{}}]}"
-    }
-*/
         struct Format {
             std::string provider;
 
