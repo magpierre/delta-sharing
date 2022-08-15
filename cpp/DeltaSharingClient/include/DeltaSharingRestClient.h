@@ -25,7 +25,7 @@ namespace DeltaSharing
         const std::shared_ptr<std::list<DeltaSharingProtocol::File>> ListFilesInTable(const DeltaSharingProtocol::Table) const;
         const DeltaSharingProtocol::Metadata QueryTableMetadata(const DeltaSharingProtocol::Table &table) const;
         const DeltaSharingProtocol::DeltaSharingProfile &GetProfile() const;
-        const RestClient::Response get(std::string url) const;
+        RestClient::Response get(std::string url);
         const bool shouldRetry(RestClient::Response &response) const;
 
     protected:
