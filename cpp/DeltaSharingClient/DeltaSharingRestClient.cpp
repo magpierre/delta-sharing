@@ -152,10 +152,9 @@ namespace DeltaSharing
 
         return t;
     };
-    const RestClient::Response DeltaSharingRestClient::get(std::string url) const
+    RestClient::Response DeltaSharingRestClient::get(std::string url)
     {
-        std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
-        RestClient::Response r = c->get(url);
+        RestClient::Response r = RestClient::get(url);
         return r;
     };
 
