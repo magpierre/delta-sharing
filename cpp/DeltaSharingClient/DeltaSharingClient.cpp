@@ -17,7 +17,29 @@
 namespace DeltaSharing
 {
 
-    DeltaSharingClient::DeltaSharingClient(std::string filename) : restClient(filename){};
+    DeltaSharingClient::DeltaSharingClient(std::string filename, boost::optional<std::string> cacheLocation) : restClient(filename){
+        auto path = std::filesystem::current_path().generic_string();
+        std::cout << "Current path: " << path << std::endl;
+        path.append("/cache");
+        this->cacheLocation = cacheLocation.get_value_or(path);
+         if(std::filesystem::exists(this->cacheLocation) == false)
+            std::filesystem::create_directories(this->cacheLocation);
+
+        if(std::filesystem::exists(this->cacheLocation) && std::filesystem::is_directory(this->cacheLocation)) {
+            auto p = std::filesystem::status(this->cacheLocation).permissions();
+            std::cout << "Cache directory:" << this->cacheLocation << " Permission: " << ((p & std::filesystem::perms::owner_read) != std::filesystem::perms::none ? "r" : "-")
+              << ((p & std::filesystem::perms::owner_write) != std::filesystem::perms::none ? "w" : "-")
+              << ((p & std::filesystem::perms::owner_exec) != std::filesystem::perms::none ? "x" : "-")
+              << ((p & std::filesystem::perms::group_read) != std::filesystem::perms::none ? "r" : "-")
+              << ((p & std::filesystem::perms::group_write) != std::filesystem::perms::none ? "w" : "-")
+              << ((p & std::filesystem::perms::group_exec) != std::filesystem::perms::none ? "x" : "-")
+              << ((p & std::filesystem::perms::others_read) != std::filesystem::perms::none ? "r" : "-")
+              << ((p & std::filesystem::perms::others_write) != std::filesystem::perms::none ? "w" : "-")
+              << ((p & std::filesystem::perms::others_exec) != std::filesystem::perms::none ? "x" : "-")
+              << '\n';
+        } 
+       
+    };
 
     std::shared_ptr<arrow::Table> DeltaSharingClient::ReadParquetFile(std::string &url)
     {
@@ -26,6 +48,7 @@ namespace DeltaSharing
 
         auto r = this->restClient.get(url);
         int cnt = 0;
+        std::cout << url << " code: " << r.code << std::endl;
         while (this->restClient.shouldRetry(r))
         {
             cnt++;
@@ -39,7 +62,7 @@ namespace DeltaSharing
         }
 
         if (r.code != 200) {
-            std::cout << "Could not read file" << std::endl;
+            std::cout << "Could not read file: " << r.code << " Message: " << r.body <<  std::endl;
             return std::shared_ptr<arrow::Table>();
         }
         auto pos = url.find_first_of('?', 8);
@@ -67,11 +90,11 @@ namespace DeltaSharing
                   << "Table: " << tbl << std::endl
                   << "File: " << path << std::endl;
 
-        auto completePath = "cache/" + share + "/" + schema + "/" + tbl;
+        auto completePath = this->cacheLocation + "/" + share + "/" + schema + "/" + tbl;
 
         std::fstream f;
         std::filesystem::create_directories(completePath);
-        f.open(completePath + "/" + path, std::ios::out | std::ios::binary);
+        f.open(completePath + "/" + path, std::ios::trunc | std::ios::out | std::ios::binary);
         f.write(r.body.c_str(), r.body.size());
         f.flush();
         f.close();
