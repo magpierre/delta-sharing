@@ -65,8 +65,16 @@ namespace DeltaSharing
             std::cout << "Could not read file: " << r.code << " Message: " << r.body <<  std::endl;
             return std::shared_ptr<arrow::Table>();
         }
-        auto pos = url.find_first_of('?', 8);
-        auto path = url.substr(8, pos - 8); // Removing "https://"
+        int protocolLength = 0;
+        if ((url.find("http://")) != std::string::npos) {
+            protocolLength = 7;
+        }
+
+         if ((url.find("https://")) != std::string::npos) {
+            protocolLength = 8;
+        }
+        auto pos = url.find_first_of('?', protocolLength);
+        auto path = url.substr(protocolLength, pos - protocolLength); // Removing "https://"
 
         std::vector<std::string> urlparts;
         while ((pos = path.find("/")) != std::string::npos)
