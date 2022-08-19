@@ -6,25 +6,27 @@
 #include "DeltaSharingRestClient.h"
 #include <arrow/table.h>
 
-#pragma once 
 namespace DeltaSharing
 {
-
+    
     struct DeltaSharingClient 
     {
     public:
         DeltaSharingClient(std::string filename, boost::optional<std::string> cacheLocation);
         std::shared_ptr<arrow::Table> ReadParquetFile(std::string &url);
-        const std::shared_ptr<std::list<DeltaSharingProtocol::Share>> ListShares(int maxResult, std::string pageToken) const;
-        const std::shared_ptr<std::list<DeltaSharingProtocol::Schema>> ListSchemas(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const;
-        const std::shared_ptr<std::list<DeltaSharingProtocol::Table>> ListTables(const DeltaSharingProtocol::Schema &schema, int maxResult, std::string pageToken) const;
-        const std::shared_ptr<std::list<DeltaSharingProtocol::Table>> ListAllTables(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const;
-        const std::shared_ptr<std::list<DeltaSharingProtocol::File>> ListFilesInTable(const DeltaSharingProtocol::Table) const;
+        const std::shared_ptr<std::vector<DeltaSharingProtocol::Share>> ListShares(int maxResult, std::string pageToken) const;
+        const std::shared_ptr<std::vector<DeltaSharingProtocol::Schema>> ListSchemas(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const;
+        const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> ListTables(const DeltaSharingProtocol::Schema &schema, int maxResult, std::string pageToken) const;
+        const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> ListAllTables(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const;
+        const std::shared_ptr<std::vector<DeltaSharingProtocol::File>> ListFilesInTable(const DeltaSharingProtocol::Table) const;
         const DeltaSharingProtocol::Metadata QueryTableMetadata(const DeltaSharingProtocol::Table &table) const;
+        const int GetNumberOfThreads() { return this->maxThreads; };
+        void PopulateCache(std::string url) { this->restClient.PopulateCache(url,this->cacheLocation); };
     protected:
     private:
         DeltaSharingRestClient restClient;
         std::string cacheLocation;
+        int maxThreads;
     };
 };
 
