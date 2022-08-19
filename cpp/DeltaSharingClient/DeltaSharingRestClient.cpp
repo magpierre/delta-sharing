@@ -3,6 +3,10 @@
 #include <fstream>
 #include <restclient-cpp/restclient.h>
 #include <restclient-cpp/connection.h>
+#include <filesystem>
+#include <exception>
+#include <chrono>
+#include <thread>
 
 namespace DeltaSharing
 {
@@ -19,14 +23,14 @@ namespace DeltaSharing
         std::cout << "DeltaSharingRestClient destructed" << std::endl;
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::Share>> DeltaSharingRestClient::ListShares(int maxResult, std::string pageToken) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::Share>> DeltaSharingRestClient::ListShares(int maxResult, std::string pageToken) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
         RestClient::Response r = c->get("/shares");
         json j = json::parse(r.body);
         auto items = j["items"];
-        std::shared_ptr<std::list<DeltaSharingProtocol::Share>> p;
-        p = std::make_shared<std::list<DeltaSharingProtocol::Share>>();
+        std::shared_ptr<std::vector<DeltaSharingProtocol::Share>> p;
+        p = std::make_shared<std::vector<DeltaSharingProtocol::Share>>();
         for (auto it = items.begin(); it < items.end(); it++)
         {
             DeltaSharingProtocol::Share s = it.value();
@@ -35,15 +39,15 @@ namespace DeltaSharing
         return p;
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::Schema>> DeltaSharingRestClient::ListSchemas(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::Schema>> DeltaSharingRestClient::ListSchemas(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
         std::string path = "/shares/" + share.name + "/schemas";
         RestClient::Response r = c->get(path);
         json j = json::parse(r.body);
         auto items = j["items"];
-        std::shared_ptr<std::list<DeltaSharingProtocol::Schema>> p;
-        p = std::make_shared<std::list<DeltaSharingProtocol::Schema>>();
+        std::shared_ptr<std::vector<DeltaSharingProtocol::Schema>> p;
+        p = std::make_shared<std::vector<DeltaSharingProtocol::Schema>>();
         for (auto it = items.begin(); it < items.end(); it++)
         {
             DeltaSharingProtocol::Schema s = it.value().get<DeltaSharingProtocol::Schema>();
@@ -52,15 +56,15 @@ namespace DeltaSharing
         return p;
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::Table>> DeltaSharingRestClient::ListTables(const DeltaSharingProtocol::Schema &schema, int maxResult, std::string pageToken) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> DeltaSharingRestClient::ListTables(const DeltaSharingProtocol::Schema &schema, int maxResult, std::string pageToken) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
         std::string path = "/shares/" + schema.share + "/schemas/" + schema.name + "/tables";
         RestClient::Response r = c->get(path);
         json j = json::parse(r.body);
         auto items = j["items"];
-        std::shared_ptr<std::list<DeltaSharingProtocol::Table>> t;
-        t = std::make_shared<std::list<DeltaSharingProtocol::Table>>();
+        std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> t;
+        t = std::make_shared<std::vector<DeltaSharingProtocol::Table>>();
         for (auto it = items.begin(); it < items.end(); it++)
         {
             DeltaSharingProtocol::Table s = it.value();
@@ -69,22 +73,21 @@ namespace DeltaSharing
         return t;
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::Table>> DeltaSharingRestClient::ListAllTables(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> DeltaSharingRestClient::ListAllTables(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
         std::string path = "/shares/" + share.name + "/all-tables";
         RestClient::Response r = c->get(path);
         json j = json::parse(r.body);
         auto items = j["items"];
-        std::shared_ptr<std::list<DeltaSharingProtocol::Table>> t;
-        t = std::make_shared<std::list<DeltaSharingProtocol::Table>>();
+        std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> t;
+        t = std::make_shared<std::vector<DeltaSharingProtocol::Table>>();
         for (auto it = items.begin(); it < items.end(); it++)
         {
             DeltaSharingProtocol::Table s = it.value();
             t->push_back(s);
         }
         return t;
-        return NULL;
     };
 
     const DeltaSharingProtocol::Metadata DeltaSharingRestClient::QueryTableMetadata(const DeltaSharingProtocol::Table &table) const {
@@ -123,7 +126,74 @@ namespace DeltaSharing
         return this->profile;
     }
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::File>> DeltaSharingRestClient::ListFilesInTable(DeltaSharingProtocol::Table table) const
+    void DeltaSharingRestClient::PopulateCache(std::string url, std::string cacheLocation) {
+        int protocolLength = 0;
+        if ((url.find("http://")) != std::string::npos)
+        {
+            protocolLength = 7;
+        }
+
+        if ((url.find("https://")) != std::string::npos)
+        {
+            protocolLength = 8;
+        }
+        auto pos = url.find_first_of('?', protocolLength);
+        auto path = url.substr(protocolLength, pos - protocolLength); // Removing "https://"
+
+        std::vector<std::string> urlparts;
+        while ((pos = path.find("/")) != std::string::npos)
+        {
+            urlparts.push_back(path.substr(0, pos));
+            path.erase(0, pos + 1);
+        }
+        if (urlparts.size() != 3)
+        {
+            std::cout << "Invalid URL:" << url << std::endl;
+            return;
+        }
+        std::string tbl = urlparts.back();
+        urlparts.pop_back();
+        std::string schema = urlparts.back();
+        urlparts.pop_back();
+        std::string share = urlparts.back();
+
+        auto completePath = cacheLocation + "/" + share + "/" + schema + "/" + tbl;
+
+        if(!std::filesystem::exists(completePath + "/" + path))
+        {
+            std::cout << completePath+ "/" + path << " does not exist in cache" << std::endl;
+            std::filesystem::create_directories(completePath);
+            auto r = this->get(url);
+            int cnt = 0;
+            std::cout << url << " code: " << r.code << std::endl;
+
+            while (this->shouldRetry(r))
+            {
+                cnt++;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                if (cnt > 4)
+                {
+                    std::cout << "Failed to retrieve file using url: ( Response code: " << r.code << ") Message: " << r.body << std::endl;
+                    return;
+                }
+                r = this->get(url);
+            }
+
+            if (r.code != 200)
+            {
+                std::cout << "Could not read file: " << r.code << " Message: " << r.body << std::endl;
+                return;
+            }
+
+            std::fstream f;
+            f.open(completePath + "/" + path, std::ios::trunc | std::ios::out | std::ios::binary);
+            f.write(r.body.c_str(), r.body.size());
+            f.flush();
+            f.close();
+        }
+    };
+
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::File>> DeltaSharingRestClient::ListFilesInTable(DeltaSharingProtocol::Table table) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
         std::string path = "/shares/" + table.share + "/schemas/" + table.schema + "/tables/" + table.name + "/query";
@@ -137,8 +207,8 @@ namespace DeltaSharing
         int cnt = 0;
         std::istringstream input;
         input.str(r.body);
-        std::shared_ptr<std::list<DeltaSharingProtocol::File>> t;
-        t = std::make_shared<std::list<DeltaSharingProtocol::File>>();
+        std::shared_ptr<std::vector<DeltaSharingProtocol::File>> t;
+        t = std::make_shared<std::vector<DeltaSharingProtocol::File>>();
         for (std::string line; std::getline(input, line); cnt++)
         {
             if (cnt > 1)
