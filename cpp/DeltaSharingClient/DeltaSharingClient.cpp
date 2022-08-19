@@ -17,60 +17,47 @@
 namespace DeltaSharing
 {
 
-    DeltaSharingClient::DeltaSharingClient(std::string filename, boost::optional<std::string> cacheLocation) : restClient(filename){
+    DeltaSharingClient::DeltaSharingClient(std::string filename, boost::optional<std::string> cacheLocation) : restClient(filename)
+    {
         auto path = std::filesystem::current_path().generic_string();
         std::cout << "Current path: " << path << std::endl;
         path.append("/cache");
         this->cacheLocation = cacheLocation.get_value_or(path);
-         if(std::filesystem::exists(this->cacheLocation) == false)
+        if (std::filesystem::exists(this->cacheLocation) == false)
             std::filesystem::create_directories(this->cacheLocation);
 
-        if(std::filesystem::exists(this->cacheLocation) && std::filesystem::is_directory(this->cacheLocation)) {
+        if (std::filesystem::exists(this->cacheLocation) && std::filesystem::is_directory(this->cacheLocation))
+        {
             auto p = std::filesystem::status(this->cacheLocation).permissions();
             std::cout << "Cache directory:" << this->cacheLocation << " Permission: " << ((p & std::filesystem::perms::owner_read) != std::filesystem::perms::none ? "r" : "-")
-              << ((p & std::filesystem::perms::owner_write) != std::filesystem::perms::none ? "w" : "-")
-              << ((p & std::filesystem::perms::owner_exec) != std::filesystem::perms::none ? "x" : "-")
-              << ((p & std::filesystem::perms::group_read) != std::filesystem::perms::none ? "r" : "-")
-              << ((p & std::filesystem::perms::group_write) != std::filesystem::perms::none ? "w" : "-")
-              << ((p & std::filesystem::perms::group_exec) != std::filesystem::perms::none ? "x" : "-")
-              << ((p & std::filesystem::perms::others_read) != std::filesystem::perms::none ? "r" : "-")
-              << ((p & std::filesystem::perms::others_write) != std::filesystem::perms::none ? "w" : "-")
-              << ((p & std::filesystem::perms::others_exec) != std::filesystem::perms::none ? "x" : "-")
-              << '\n';
-        } 
-       
+                      << ((p & std::filesystem::perms::owner_write) != std::filesystem::perms::none ? "w" : "-")
+                      << ((p & std::filesystem::perms::owner_exec) != std::filesystem::perms::none ? "x" : "-")
+                      << ((p & std::filesystem::perms::group_read) != std::filesystem::perms::none ? "r" : "-")
+                      << ((p & std::filesystem::perms::group_write) != std::filesystem::perms::none ? "w" : "-")
+                      << ((p & std::filesystem::perms::group_exec) != std::filesystem::perms::none ? "x" : "-")
+                      << ((p & std::filesystem::perms::others_read) != std::filesystem::perms::none ? "r" : "-")
+                      << ((p & std::filesystem::perms::others_write) != std::filesystem::perms::none ? "w" : "-")
+                      << ((p & std::filesystem::perms::others_exec) != std::filesystem::perms::none ? "x" : "-")
+                      << '\n';
+        }
+        this->maxThreads = std::thread::hardware_concurrency();
     };
+
 
     std::shared_ptr<arrow::Table> DeltaSharingClient::ReadParquetFile(std::string &url)
     {
+        
         if (url.length() == 0)
             return std::shared_ptr<arrow::Table>();
 
-        auto r = this->restClient.get(url);
-        int cnt = 0;
-        std::cout << url << " code: " << r.code << std::endl;
-        while (this->restClient.shouldRetry(r))
-        {
-            cnt++;
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            if (cnt > 4)
-            {
-                std::cout << "Failed to retrieve file using url: ( Response code: " << r.code << ") Message: " << r.body << std::endl;
-                return std::shared_ptr<arrow::Table>();
-            }
-            r = this->restClient.get(url);
-        }
-
-        if (r.code != 200) {
-            std::cout << "Could not read file: " << r.code << " Message: " << r.body <<  std::endl;
-            return std::shared_ptr<arrow::Table>();
-        }
         int protocolLength = 0;
-        if ((url.find("http://")) != std::string::npos) {
+        if ((url.find("http://")) != std::string::npos)
+        {
             protocolLength = 7;
         }
 
-         if ((url.find("https://")) != std::string::npos) {
+        if ((url.find("https://")) != std::string::npos)
+        {
             protocolLength = 8;
         }
         auto pos = url.find_first_of('?', protocolLength);
@@ -93,19 +80,8 @@ namespace DeltaSharing
         urlparts.pop_back();
         std::string share = urlparts.back();
 
-        std::cout << "Share: " << share << std::endl
-                  << "Schema: " << schema << std::endl
-                  << "Table: " << tbl << std::endl
-                  << "File: " << path << std::endl;
 
         auto completePath = this->cacheLocation + "/" + share + "/" + schema + "/" + tbl;
-
-        std::fstream f;
-        std::filesystem::create_directories(completePath);
-        f.open(completePath + "/" + path, std::ios::trunc | std::ios::out | std::ios::binary);
-        f.write(r.body.c_str(), r.body.size());
-        f.flush();
-        f.close();
         std::shared_ptr<arrow::io::ReadableFile> infile;
         try
         {
@@ -126,32 +102,33 @@ namespace DeltaSharing
         return table;
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::Share>> DeltaSharingClient::ListShares(int maxResult, std::string pageToken) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::Share>> DeltaSharingClient::ListShares(int maxResult, std::string pageToken) const
     {
         return this->restClient.ListShares(maxResult, pageToken);
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::Schema>> DeltaSharingClient::ListSchemas(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::Schema>> DeltaSharingClient::ListSchemas(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
     {
         return this->restClient.ListSchemas(share, maxResult, pageToken);
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::Table>> DeltaSharingClient::ListTables(const DeltaSharingProtocol::Schema &schema, int maxResult, std::string pageToken) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> DeltaSharingClient::ListTables(const DeltaSharingProtocol::Schema &schema, int maxResult, std::string pageToken) const
     {
         return this->restClient.ListTables(schema, maxResult, pageToken);
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::Table>> DeltaSharingClient::ListAllTables(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> DeltaSharingClient::ListAllTables(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
     {
         return this->restClient.ListAllTables(share, maxResult, pageToken);
     };
 
-    const std::shared_ptr<std::list<DeltaSharingProtocol::File>> DeltaSharingClient::ListFilesInTable(const DeltaSharingProtocol::Table table) const
+    const std::shared_ptr<std::vector<DeltaSharingProtocol::File>> DeltaSharingClient::ListFilesInTable(const DeltaSharingProtocol::Table table) const
     {
         return this->restClient.ListFilesInTable(table);
     };
 
-     const DeltaSharingProtocol::Metadata DeltaSharingClient::QueryTableMetadata(const DeltaSharingProtocol::Table &table) const {
+    const DeltaSharingProtocol::Metadata DeltaSharingClient::QueryTableMetadata(const DeltaSharingProtocol::Table &table) const
+    {
         return this->restClient.QueryTableMetadata(table);
-     };
+    };
 };
