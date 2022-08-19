@@ -1,3 +1,5 @@
+include( ExternalProject )
+
 cmake_minimum_required(VERSION 3.11)
 set(DEFAULT_BUILD_TYPE "Release")
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
@@ -18,6 +20,19 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
+
+
+ExternalProject_Add(restclient
+  GIT_REPOSITORY https://github.com/mrtazz/restclient-cpp
+  SOURCE_DIR restclient
+  BUILD_IN_SOURCE 1
+  UPDATE_COMMAND ""
+  PATCH_COMMAND ""
+  CONFIGURE_COMMAND ./autogen.sh && ./configure
+  BUILD_COMMAND make
+  INSTALL_COMMAND make install
+)
+
 
 
 if(NOT DEFINED PROJECT_VERSION)
@@ -43,13 +58,11 @@ find_package(Parquet REQUIRED)
 target_include_directories(${TARGET} PRIVATE /usr/local/include/)
 
 target_link_libraries(${TARGET} PRIVATE nlohmann_json::nlohmann_json Boost::program_options /usr/local/lib/librestclient-cpp.dylib PRIVATE arrow_shared parquet_shared)
-#target_link_libraries(MyHelloWorld PRIVATE nlohmann_json::nlohmann_json /usr/local/lib/librestclient-cpp.dylib)
-# target_compile_features(MyHelloWorld PRIVATE cxx_std_17)
 
 target_compile_features(${TARGET} PRIVATE cxx_std_17)
 set_target_properties(${TARGET} PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(${TARGET} PROPERTIES SOVERSION 0)
-set_target_properties(${TARGET} PROPERTIES PUBLIC_HEADER "../include/DeltaSharingClient.h;../include/DeltaSharingRestClient.h;../include/Protocol.h")
+set_target_properties(${TARGET} PROPERTIES PUBLIC_HEADER "../include/DeltaSharingClient.h;../include/DeltaSharingRestClient.h;../include/Protocol.h;../include/functions.h")
 
 include(GNUInstallDirs)
 install(TARGETS ${TARGET} EXPORT DeltaSharingConfig
