@@ -9,8 +9,15 @@ Install apache-arrow, and nlohmann-json using homebrew:
 ```sh
 brew install cmake
 brew install boost
+brew install openSSL
 brew install apache-arrow
 brew install nlohmann-json
+brew install automake
+
+# sometimes has CMAKE a hard time finding packages
+# by setting these you should help the arrow find package quite much
+export PARQUET_HOME=/usr/local/opt/apache-arrow
+export ARROW_HOME=/usr/local/opt/apache-arrow
 
 cd build
 cmake .
