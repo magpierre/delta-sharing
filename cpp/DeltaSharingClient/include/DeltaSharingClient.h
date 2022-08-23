@@ -14,6 +14,7 @@ namespace DeltaSharing
     public:
         DeltaSharingClient(std::string filename, boost::optional<std::string> cacheLocation);
         std::shared_ptr<arrow::Table> ReadParquetFile(std::string &url);
+        std::shared_ptr<arrow::Table> ReadTableFromCache(std::string &url);
         const std::shared_ptr<std::vector<DeltaSharingProtocol::Share>> ListShares(int maxResult, std::string pageToken) const;
         const std::shared_ptr<std::vector<DeltaSharingProtocol::Schema>> ListSchemas(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const;
         const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> ListTables(const DeltaSharingProtocol::Schema &schema, int maxResult, std::string pageToken) const;

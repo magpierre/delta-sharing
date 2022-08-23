@@ -3,16 +3,22 @@
 #include "include/DeltaSharingClient.h"
 #include <parquet/stream_reader.h>
 #include <arrow/io/memory.h>
-#include <arrow/dataset/dataset.h>
+//#include <arrow/dataset/dataset.h>
 #include <parquet/arrow/reader.h>
 #include <parquet/exception.h>
 #include <arrow/api.h>
 #include <arrow/io/api.h>
+#include <arrow/filesystem/filesystem.h>
+#include <arrow/dataset/dataset.h>
 #include <fstream>
 #include <filesystem>
 #include <exception>
 #include <chrono>
 #include <thread>
+
+
+//namespace ds = arrow::dataset;
+//namespace fs = arrow::fs;
 
 namespace DeltaSharing
 {
@@ -43,10 +49,9 @@ namespace DeltaSharing
         this->maxThreads = std::thread::hardware_concurrency();
     };
 
-
     std::shared_ptr<arrow::Table> DeltaSharingClient::ReadParquetFile(std::string &url)
     {
-        
+
         if (url.length() == 0)
             return std::shared_ptr<arrow::Table>();
 
@@ -80,7 +85,6 @@ namespace DeltaSharing
         urlparts.pop_back();
         std::string share = urlparts.back();
 
-
         auto completePath = this->cacheLocation + "/" + share + "/" + schema + "/" + tbl;
         std::shared_ptr<arrow::io::ReadableFile> infile;
         try
@@ -100,6 +104,25 @@ namespace DeltaSharing
         PARQUET_THROW_NOT_OK(reader->ReadTable(&table));
 
         return table;
+    };
+
+    std::shared_ptr<arrow::Table> DeltaSharingClient::ReadTableFromCache(std::string &completePath)
+    {
+
+       // fs::FileSelector selector;
+       /// selector.base_dir = completePath;
+
+
+       // auto filesystem = fs::FileSystemFromUriOrPath(completePath);
+        //auto format = std::make_shared<ds::ParquetFileFormat>();
+        //auto format = std::make_shared<ds::ParquetFileFormat>();
+       //ds::FileSystemFactoryOptions opts;
+
+       //  ds::FileSystemDatasetFactory
+       // ds::FileSystemDatasetFactory f;
+
+       // auto factor = ds::FileSystemDatasetFactory::Make(filesystem, selector, NULL, NULL);
+       return std::shared_ptr<arrow::Table>();
     };
 
     const std::shared_ptr<std::vector<DeltaSharingProtocol::Share>> DeltaSharingClient::ListShares(int maxResult, std::string pageToken) const
