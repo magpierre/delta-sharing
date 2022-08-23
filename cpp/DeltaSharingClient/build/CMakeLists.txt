@@ -1,4 +1,5 @@
 include( ExternalProject )
+include(FetchContent)
 
 cmake_minimum_required(VERSION 3.11)
 set(DEFAULT_BUILD_TYPE "Release")
@@ -22,6 +23,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 
+
+# Google TEST
+FetchContent_Declare(googletest
+  GIT_REPOSITORY https://github.com/google/googletest
+  GIT_TAG release-1.12.1
+)
+
+FetchContent_MakeAvailable(googletest)
+
 ExternalProject_Add(restclient
   GIT_REPOSITORY https://github.com/mrtazz/restclient-cpp
   SOURCE_DIR restclient
@@ -30,7 +40,8 @@ ExternalProject_Add(restclient
   PATCH_COMMAND ""
   CONFIGURE_COMMAND ./autogen.sh && ./configure
   BUILD_COMMAND make
-  INSTALL_COMMAND make install
+  # INSTALL_COMMAND make install
+  INSTALL_COMMAND sudo make install
 )
 
 
@@ -48,16 +59,17 @@ project(${TARGET} VERSION 0.0.1 DESCRIPTION "DeltaSharingClient for C++")
 set(OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl@1.1/)
 
 # add the executable
-add_library(${TARGET} ../DeltaSharingRestClient.cpp ../DeltaSharingClient.cpp)
+add_library(${TARGET} SHARED ../DeltaSharingRestClient.cpp ../DeltaSharingClient.cpp ../functions.cpp)
 
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Boost 1.79.0 REQUIRED COMPONENTS Program_options)
 find_package(Arrow REQUIRED)
 find_package(Parquet REQUIRED)
+find_package(ArrowDataset REQUIRED)
 #include all necessary external includes
 target_include_directories(${TARGET} PRIVATE /usr/local/include/)
 
-target_link_libraries(${TARGET} PRIVATE nlohmann_json::nlohmann_json Boost::program_options /usr/local/lib/librestclient-cpp.dylib PRIVATE arrow_shared parquet_shared)
+target_link_libraries(${TARGET} PRIVATE nlohmann_json::nlohmann_json Boost::program_options /usr/local/lib/librestclient-cpp.dylib ${ARROW_SHARED_LIB} ${ARROW_DATASET_SHARED_LIB} ${PARQUET_SHARED_LIB})
 
 target_compile_features(${TARGET} PRIVATE cxx_std_17)
 set_target_properties(${TARGET} PROPERTIES VERSION ${PROJECT_VERSION})
@@ -72,3 +84,25 @@ install(TARGETS ${TARGET} EXPORT DeltaSharingConfig
 
 install(EXPORT DeltaSharingConfig DESTINATION share/DeltaSharing/cmake)
 export(TARGETS ${TARGET} FILE DeltaSharingConfig.cmake)
+
+enable_testing()
+
+add_executable(
+  TestRunner
+  ../tests/functions_test.cpp
+)
+
+target_link_libraries(
+  TestRunner
+  GTest::gtest_main
+  nlohmann_json::nlohmann_json 
+  Boost::program_options 
+  /usr/local/lib/librestclient-cpp.dylib 
+  ${ARROW_SHARED_LIB} 
+  ${ARROW_DATASET_SHARED_LIB} 
+  ${PARQUET_SHARED_LIB}
+  ${TARGET}
+)
+
+include(GoogleTest)
+gtest_discover_tests(TestRunner)
