@@ -7,6 +7,8 @@ To build it (Mac OS):
 Install apache-arrow, and nlohmann-json using homebrew:
 
 ```sh
+brew install cmake
+brew install boost
 brew install apache-arrow
 brew install nlohmann-json
 
