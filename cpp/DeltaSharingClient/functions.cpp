@@ -12,7 +12,7 @@ namespace DeltaSharing
 
         if (pos == std::string::npos)
         {
-            std::cout << "Invalid path: " << url << std::endl;
+            std::cerr << "Invalid path: " << url << std::endl;
             return std::vector<std::string>();
         }
         urlparts.push_back(url.substr(0, pos));
@@ -25,7 +25,7 @@ namespace DeltaSharing
         urlparts.push_back(url);
         if (urlparts.size() != 4)
         {
-            std::cout << "Path does not follow pattern: <server>#<share>.<schema>.<table>, " << path << std::endl;
+            std::cerr << "Path does not follow pattern: <server>#<share>.<schema>.<table>, " << path << std::endl;
         }
         return urlparts;
     };
@@ -39,7 +39,7 @@ namespace DeltaSharing
 
         auto p = ParseURL(path);
         if(p.size() != 4) {
-            std::cout << "PATH NOT CORRECT: " << path << std::endl;
+            std::cerr << "PATH NOT CORRECT: " << path << std::endl;
             return std::shared_ptr<arrow::Table>();
         }
         auto cl = NewDeltaSharingClient(p.at(0),boost::none);
@@ -67,7 +67,7 @@ namespace DeltaSharing
 
         if(flist->size() > fileno) {
            auto f = flist->at(fileno);
-           std::cout << "Number of threads supported: " << cl->GetNumberOfThreads() << std::endl;
+           std::cerr << "Number of threads supported: " << cl->GetNumberOfThreads() << std::endl;
            
            return cl->ReadParquetFile(f.url);
         } else
