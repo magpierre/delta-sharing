@@ -5,6 +5,9 @@ cmake_minimum_required(VERSION 3.11)
 # set(DEFAULT_BUILD_TYPE "Release")
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(NOT DEFINED TARGET)
   set(TARGET DeltaSharingClient)
@@ -17,19 +20,26 @@ FetchContent_Declare(googletest
   GIT_REPOSITORY https://github.com/google/googletest
   GIT_TAG release-1.12.1
 )
-FetchContent_MakeAvailable(googletest)
+FetchContent_GetProperties(googletest)
+if(NOT googletest_POPULATED)
+  FetchContent_Populate(googletest)
+  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+
+
 
 # Get restclient-cpp from github
 ExternalProject_Add(restclient
   GIT_REPOSITORY https://github.com/mrtazz/restclient-cpp
-  GIT_TAG 0.5.2
-  SOURCE_DIR restclient
-  BUILD_IN_SOURCE 1
-  UPDATE_COMMAND ""
-  PATCH_COMMAND ""
-  CONFIGURE_COMMAND ./autogen.sh && ./configure
-  BUILD_COMMAND make
-  INSTALL_COMMAND sudo make install
+ GIT_TAG 0.5.2
+ SOURCE_DIR restclient
+ BUILD_IN_SOURCE 1
+ UPDATE_COMMAND ""
+ PATCH_COMMAND ""
+ CONFIGURE_COMMAND ./autogen.sh && ./configure
+ BUILD_COMMAND make
+ INSTALL_COMMAND sudo make install
 )
 
 if(NOT DEFINED PROJECT_VERSION)
@@ -62,11 +72,19 @@ find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Boost 1.79.0 REQUIRED COMPONENTS Program_options)
 find_package(Arrow REQUIRED)
 find_package(Parquet REQUIRED)
-find_package(ArrowDataset REQUIRED)
+#find_package(ArrowDataset REQUIRED)
 
 #include all necessary external includes
 target_include_directories(${TARGET} PRIVATE ${CMAKE_INSTALL_FULL_INCLUDEDIR})
-target_link_libraries(${TARGET} PRIVATE nlohmann_json::nlohmann_json Boost::program_options ${CMAKE_INSTALL_FULL_LIBDIR}/librestclient-cpp.dylib ${ARROW_SHARED_LIB} ${ARROW_DATASET_SHARED_LIB} ${PARQUET_SHARED_LIB})
+target_link_libraries(
+  ${TARGET} 
+  PRIVATE  Boost::program_options 
+  PRIVATE nlohmann_json::nlohmann_json 
+  PRIVATE /usr/local/lib/librestclient-cpp.dylib 
+  PRIVATE ${ARROW_SHARED_LIB} 
+ # ${ARROW_DATASET_SHARED_LIB} 
+  PRIVATE ${PARQUET_SHARED_LIB}
+)
 
 target_compile_features(${TARGET} PRIVATE cxx_std_17)
 set_target_properties(${TARGET} PROPERTIES VERSION ${PROJECT_VERSION})
@@ -99,16 +117,18 @@ add_executable(
 # Link libraries used in library
 target_link_libraries(
   TestRunner
-  GTest::gtest_main
-  nlohmann_json::nlohmann_json 
+  PRIVATE GTest::gtest_main
+  PRIVATE nlohmann_json::nlohmann_json 
   Boost::program_options 
-  ${CMAKE_INSTALL_FULL_LIBDIR}/librestclient-cpp.dylib 
-  ${ARROW_SHARED_LIB} 
-  ${ARROW_DATASET_SHARED_LIB} 
-  ${PARQUET_SHARED_LIB}
+  PRIVATE ${CMAKE_INSTALL_FULL_LIBDIR}/librestclient-cpp.dylib 
+  PRIVATE ${ARROW_SHARED_LIB} 
+  #${ARROW_DATASET_SHARED_LIB} 
+  PRIVATE ${PARQUET_SHARED_LIB}
   ${TARGET}
 )
 
 #Add Google Test
 include(GoogleTest)
 gtest_discover_tests(TestRunner)
+
+message("Parquet: ${PARQUET_HOME} ${PARQUET_INCLUDE_DIR}")
