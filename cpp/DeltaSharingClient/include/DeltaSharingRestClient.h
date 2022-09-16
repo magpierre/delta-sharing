@@ -34,6 +34,7 @@ namespace DeltaSharing
 
     private:
         DeltaSharingProtocol::DeltaSharingProfile profile;
+        static const std::string user_agent;
     };
 };
 
