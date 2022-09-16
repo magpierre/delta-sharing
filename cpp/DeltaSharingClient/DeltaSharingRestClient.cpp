@@ -11,21 +11,29 @@
 namespace DeltaSharing
 {
 
+    const std::string DeltaSharingRestClient::user_agent = "delta-sharing-CPP/0.0.1";
+
     DeltaSharingRestClient::DeltaSharingRestClient(std::string filename)
     {
+
+
         json j = ReadFromFile(filename);
+        if(j.empty()) {
+            return;
+        }
         this->profile = j;
         RestClient::init();
     };
 
     DeltaSharingRestClient::~DeltaSharingRestClient()
     {
-        std::cout << "DeltaSharingRestClient destructed" << std::endl;
+        std::cerr << "DeltaSharingRestClient destructed" << std::endl;
     };
 
     const std::shared_ptr<std::vector<DeltaSharingProtocol::Share>> DeltaSharingRestClient::ListShares(int maxResult, std::string pageToken) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
+        c->SetUserAgent(this->user_agent);
         RestClient::Response r = c->get("/shares");
         json j = json::parse(r.body);
         auto items = j["items"];
@@ -42,6 +50,7 @@ namespace DeltaSharing
     const std::shared_ptr<std::vector<DeltaSharingProtocol::Schema>> DeltaSharingRestClient::ListSchemas(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
+        c->SetUserAgent(this->user_agent);
         std::string path = "/shares/" + share.name + "/schemas";
         RestClient::Response r = c->get(path);
         json j = json::parse(r.body);
@@ -59,6 +68,7 @@ namespace DeltaSharing
     const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> DeltaSharingRestClient::ListTables(const DeltaSharingProtocol::Schema &schema, int maxResult, std::string pageToken) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
+        c->SetUserAgent(this->user_agent);
         std::string path = "/shares/" + schema.share + "/schemas/" + schema.name + "/tables";
         RestClient::Response r = c->get(path);
         json j = json::parse(r.body);
@@ -76,6 +86,7 @@ namespace DeltaSharing
     const std::shared_ptr<std::vector<DeltaSharingProtocol::Table>> DeltaSharingRestClient::ListAllTables(const DeltaSharingProtocol::Share &share, int maxResult, std::string pageToken) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
+        c->SetUserAgent(this->user_agent);
         std::string path = "/shares/" + share.name + "/all-tables";
         RestClient::Response r = c->get(path);
         json j = json::parse(r.body);
@@ -92,6 +103,7 @@ namespace DeltaSharing
 
     const DeltaSharingProtocol::Metadata DeltaSharingRestClient::QueryTableMetadata(const DeltaSharingProtocol::Table &table) const {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
+        c->SetUserAgent(this->user_agent);
         std::string path = "/shares/" + table.share + "/schemas/" + table.schema + "/tables/" + table.name + "/metadata";
         RestClient::Response r = c->get(path);
         std::istringstream input;
@@ -114,7 +126,14 @@ namespace DeltaSharing
     json DeltaSharingRestClient::ReadFromFile(std::string filename)
     {
         std::ifstream is;
-        is.open(filename, std::ifstream::in);
+        try {
+            is.open(filename, std::ifstream::in);
+        }
+        catch (std::exception *e) {
+            json r = {};
+            return r;
+        }
+
         json j;
         is >> j;
         is.close();
@@ -148,7 +167,7 @@ namespace DeltaSharing
         }
         if (urlparts.size() != 3)
         {
-            std::cout << "Invalid URL:" << url << std::endl;
+            std::cerr << "Invalid URL:" << url << std::endl;
             return;
         }
         std::string tbl = urlparts.back();
@@ -161,11 +180,11 @@ namespace DeltaSharing
 
         if(!std::filesystem::exists(completePath + "/" + path))
         {
-            std::cout << completePath+ "/" + path << " does not exist in cache" << std::endl;
+            std::cerr << completePath+ "/" + path << " does not exist in cache" << std::endl;
             std::filesystem::create_directories(completePath);
             auto r = this->get(url);
             int cnt = 0;
-            std::cout << url << " code: " << r.code << std::endl;
+            std::cerr << url << " code: " << r.code << std::endl;
 
             while (this->shouldRetry(r))
             {
@@ -173,7 +192,7 @@ namespace DeltaSharing
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 if (cnt > 4)
                 {
-                    std::cout << "Failed to retrieve file using url: ( Response code: " << r.code << ") Message: " << r.body << std::endl;
+                    std::cerr << "Failed to retrieve file using url: ( Response code: " << r.code << ") Message: " << r.body << std::endl;
                     return;
                 }
                 r = this->get(url);
@@ -181,7 +200,7 @@ namespace DeltaSharing
 
             if (r.code != 200)
             {
-                std::cout << "Could not read file: " << r.code << " Message: " << r.body << std::endl;
+                std::cerr << "Could not read file: " << r.code << " Message: " << r.body << std::endl;
                 return;
             }
 
@@ -196,6 +215,7 @@ namespace DeltaSharing
     const std::shared_ptr<std::vector<DeltaSharingProtocol::File>> DeltaSharingRestClient::ListFilesInTable(DeltaSharingProtocol::Table table) const
     {
         std::unique_ptr<RestClient::Connection> c = std::unique_ptr<RestClient::Connection>(new RestClient::Connection(this->profile.endpoint));
+        c->SetUserAgent(this->user_agent);
         std::string path = "/shares/" + table.share + "/schemas/" + table.schema + "/tables/" + table.name + "/query";
         RestClient::HeaderFields h;
         h.insert({"Content-Type", "application/json; charset=UTF-8"});
@@ -233,10 +253,10 @@ namespace DeltaSharing
     if(r.code == 200)
         return false;
 	if (r.code == 429) {
-		std::cout << "Retry operation due to status code: 429" << std::endl;
+		std::cerr << "Retry operation due to status code: 429" << std::endl;
 		return true;
 	} else if (r.code >= 500 && r.code < 600 ) {
-		std::cout << "Retry operation due to status code: " << r.code << std::endl;
+		std::cerr << "Retry operation due to status code: " << r.code << std::endl;
 		return true;
 	} else 
 		return false;

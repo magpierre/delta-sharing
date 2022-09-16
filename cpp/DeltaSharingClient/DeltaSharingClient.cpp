@@ -26,7 +26,7 @@ namespace DeltaSharing
     DeltaSharingClient::DeltaSharingClient(std::string filename, boost::optional<std::string> cacheLocation) : restClient(filename)
     {
         auto path = std::filesystem::current_path().generic_string();
-        std::cout << "Current path: " << path << std::endl;
+        std::cerr << "Current path: " << path << std::endl;
         path.append("/cache");
         this->cacheLocation = cacheLocation.get_value_or(path);
         if (std::filesystem::exists(this->cacheLocation) == false)
@@ -35,7 +35,7 @@ namespace DeltaSharing
         if (std::filesystem::exists(this->cacheLocation) && std::filesystem::is_directory(this->cacheLocation))
         {
             auto p = std::filesystem::status(this->cacheLocation).permissions();
-            std::cout << "Cache directory:" << this->cacheLocation << " Permission: " << ((p & std::filesystem::perms::owner_read) != std::filesystem::perms::none ? "r" : "-")
+            std::cerr << "Cache directory:" << this->cacheLocation << " Permission: " << ((p & std::filesystem::perms::owner_read) != std::filesystem::perms::none ? "r" : "-")
                       << ((p & std::filesystem::perms::owner_write) != std::filesystem::perms::none ? "w" : "-")
                       << ((p & std::filesystem::perms::owner_exec) != std::filesystem::perms::none ? "x" : "-")
                       << ((p & std::filesystem::perms::group_read) != std::filesystem::perms::none ? "r" : "-")
@@ -76,7 +76,7 @@ namespace DeltaSharing
         }
         if (urlparts.size() != 3)
         {
-            std::cout << "Invalid URL:" << url << std::endl;
+            std::cerr << "Invalid URL:" << url << std::endl;
             return std::shared_ptr<arrow::Table>();
         }
         std::string tbl = urlparts.back();
@@ -94,7 +94,7 @@ namespace DeltaSharing
         }
         catch (parquet::ParquetStatusException e)
         {
-            std::cout << "error code:(" << e.status() << ") Message: " << e.what() << std::endl;
+            std::cerr << "error code:(" << e.status() << ") Message: " << e.what() << std::endl;
             return std::shared_ptr<arrow::Table>();
         }
         std::unique_ptr<parquet::arrow::FileReader> reader;
