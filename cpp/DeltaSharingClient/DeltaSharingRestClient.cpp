@@ -1,6 +1,7 @@
 
 #include "include/DeltaSharingRestClient.h"
 #include <fstream>
+#include <sstream>
 #include <restclient-cpp/restclient.h>
 #include <restclient-cpp/connection.h>
 #include <filesystem>
