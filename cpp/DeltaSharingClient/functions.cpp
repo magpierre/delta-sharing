@@ -69,7 +69,7 @@ namespace DeltaSharing
            auto f = flist->at(fileno);
            std::cerr << "Number of threads supported: " << cl->GetNumberOfThreads() << std::endl;
            
-           return cl->ReadParquetFile(f.url);
+           return cl->LoadAsArrowTable(f.url);
         } else
             return std::shared_ptr<arrow::Table>();
     };

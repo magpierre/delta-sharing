@@ -49,7 +49,7 @@ namespace DeltaSharing
         this->maxThreads = std::thread::hardware_concurrency();
     };
 
-    std::shared_ptr<arrow::Table> DeltaSharingClient::ReadParquetFile(std::string &url)
+    std::shared_ptr<arrow::Table> DeltaSharingClient::LoadAsArrowTable(std::string &url)
     {
 
         if (url.length() == 0)
