@@ -1,8 +1,9 @@
 include( ExternalProject )
 include( FetchContent )
+include(GNUInstallDirs)
 
 cmake_minimum_required(VERSION 3.11)
-# set(DEFAULT_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Release")
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -13,7 +14,6 @@ if(NOT DEFINED TARGET)
   set(TARGET DeltaSharingClient)
 endif()
 
-include(GNUInstallDirs)
 
 # Get Google TEST
 FetchContent_Declare(googletest
@@ -76,11 +76,12 @@ find_package(Parquet REQUIRED)
 
 #include all necessary external includes
 target_include_directories(${TARGET} PRIVATE ${CMAKE_INSTALL_FULL_INCLUDEDIR})
+
 target_link_libraries(
   ${TARGET} 
   PRIVATE  Boost::program_options 
   PRIVATE nlohmann_json::nlohmann_json 
-  PRIVATE /usr/local/lib/librestclient-cpp.dylib 
+  PRIVATE ${CMAKE_INSTALL_FULL_LIBDIR}/librestclient-cpp.dylib 
   PRIVATE ${ARROW_SHARED_LIB} 
  # ${ARROW_DATASET_SHARED_LIB} 
   PRIVATE ${PARQUET_SHARED_LIB}
@@ -91,7 +92,6 @@ set_target_properties(${TARGET} PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(${TARGET} PROPERTIES SOVERSION 0)
 set_target_properties(${TARGET} PROPERTIES PUBLIC_HEADER "../include/DeltaSharingClient.h;../include/DeltaSharingRestClient.h;../include/Protocol.h;../include/functions.h")
 
-
 install(
     TARGETS ${TARGET} 
     EXPORT DeltaSharingConfig
@@ -101,7 +101,7 @@ install(
 )
 
 # Export CMake config 
-install(EXPORT DeltaSharingConfig DESTINATION share/DeltaSharing/cmake)
+install(EXPORT DeltaSharingConfig DESTINATION ${CMAKE_INSTALL_FULL_DATAROOTDIR}/DeltaSharing/cmake)
 export(TARGETS ${TARGET} FILE DeltaSharingConfig.cmake)
 
 
@@ -120,7 +120,7 @@ target_link_libraries(
   PRIVATE GTest::gtest_main
   PRIVATE nlohmann_json::nlohmann_json 
   Boost::program_options 
-  PRIVATE ${CMAKE_INSTALL_FULL_LIBDIR}/librestclient-cpp.dylib 
+  PRIVATE /usr/local/lib/librestclient-cpp.dylib 
   PRIVATE ${ARROW_SHARED_LIB} 
   #${ARROW_DATASET_SHARED_LIB} 
   PRIVATE ${PARQUET_SHARED_LIB}
