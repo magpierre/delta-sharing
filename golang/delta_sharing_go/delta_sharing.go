@@ -85,7 +85,7 @@ func LoadAsArrowTable(url string, fileno int) (arrow.Table, error) {
 	pkg := "delta_sharing.go"
 	fn := "LoadAsArrowTable"
 	profile, shareStr, schemaStr, tableStr := _ParseURL(url)
-	s, err := NewSharingClient(context.Background(), profile)
+	s, err := NewSharingClient(context.Background(), profile, "")
 	if err != nil {
 		return nil, err
 	}
@@ -151,14 +151,14 @@ type sharingClient struct {
 	restClient *deltaSharingRestClient
 }
 
-func NewSharingClient(Ctx context.Context, ProfileFile string) (*sharingClient, error) {
+func NewSharingClient(Ctx context.Context, ProfileFile string, cacheDir string) (*sharingClient, error) {
 	pkg := "delta_sharing.go"
 	fn := "NewSharingClient"
 	p, err := newDeltaSharingProfile(ProfileFile)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "NewDeltaSharingProfile", err.Error()}
 	}
-	r := newDeltaSharingRestClient(Ctx, p, 5)
+	r := newDeltaSharingRestClient(Ctx, p, cacheDir, 5)
 	if r == nil {
 		return nil, &DSErr{pkg, fn, "NewDeltaSharingRestClient", "Could not create DeltaSharingRestClient"}
 	}
@@ -225,4 +225,14 @@ func (s *sharingClient) GetTableMetadata(t Table) (*metadata, error) {
 		return nil, err
 	}
 	return &m.Metadata, nil
+}
+
+func (s *sharingClient) RemoveFileFromCache(url string) error {
+	pkg := "delta_sharing.go"
+	fn := "NewSharingClient"
+
+	if s == nil || s.restClient == nil {
+		return &DSErr{pkg, fn, "RemoveFileFromCache", "cache not initialized"}
+	}
+	return s.restClient.RemoveFileFromCache(url)
 }

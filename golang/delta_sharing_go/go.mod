@@ -2,7 +2,10 @@ module github.com/delta-io/delta_sharing_go
 
 go 1.18
 
-require github.com/apache/arrow/go/v8 v8.0.0-20220415204549-d36b2b3392ed
+require (
+	github.com/apache/arrow/go/v8 v8.0.0-20220415204549-d36b2b3392ed
+	github.com/spf13/afero v1.9.2
+)
 
 require (
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect

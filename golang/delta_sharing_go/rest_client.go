@@ -23,11 +23,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
+	"time"
+
+	afero "github.com/spf13/afero"
 )
 
 /* Response types */
@@ -72,23 +76,91 @@ type listCdcFilesResponse struct {
 type deltaSharingRestClient struct {
 	profile    *deltaSharingProfile
 	numRetries int
+	cacheDir   string
+	cache      afero.Fs
 	ctx        context.Context
 }
 
 /* Constructor for the DeltaSharingRestClient */
-func newDeltaSharingRestClient(ctx context.Context, profile *deltaSharingProfile, numRetries int) *deltaSharingRestClient {
-	return &deltaSharingRestClient{profile: profile, numRetries: numRetries, ctx: ctx}
+func newDeltaSharingRestClient(ctx context.Context, profile *deltaSharingProfile, cacheDir string, numRetries int) *deltaSharingRestClient {
+
+	// create dir
+	// with the right settings
+
+	base := afero.NewOsFs()
+	layer := afero.NewMemMapFs()
+	ufs := afero.NewCacheOnReadFs(base, layer, 100*time.Second)
+	var cache = cacheDir
+	if len(cacheDir) == 0 {
+		ufs.Mkdir("cache", 0755)
+		cache = "cache"
+	} else {
+		ufs.Mkdir(cacheDir, 0755)
+	}
+
+	return &deltaSharingRestClient{
+		profile:    profile,
+		numRetries: numRetries,
+		cacheDir:   cache,
+		cache:      ufs,
+		ctx:        ctx}
+
 }
 
-func (d *deltaSharingRestClient) readFileReader(url string) (*bytes.Reader, error) {
+func (d *deltaSharingRestClient) RemoveFileFromCache(urlString string) error {
+	u, err := url.Parse(urlString)
+	if err != nil {
+		return err
+	}
+	var completePath = d.cacheDir + "/" + u.Host + u.Path
 
-	r, err := http.Get(url)
+	_, err = d.cache.Stat(completePath)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return d.cache.Remove(completePath)
+}
+
+func (d *deltaSharingRestClient) readFileReader(urlString string) (*bytes.Reader, error) {
+
+	u, err := url.Parse(urlString)
 	if err != nil {
 		return nil, err
 	}
-	b, err := ioutil.ReadAll(r.Body)
-	br := bytes.NewReader(b)
+	var completePath = d.cacheDir + "/" + u.Host + u.Path
+	var p = strings.LastIndex(completePath, "/")
+	_, err = d.cache.Stat(completePath[:p])
+	if os.IsNotExist(err) {
+		d.cache.MkdirAll(completePath[:p], 0755)
+	}
 
+	cs, err := d.cache.Stat(completePath)
+	if os.IsNotExist(err) == false && cs.Size() == 0 {
+		d.cache.Remove(completePath)
+	} else if os.IsNotExist(err) == false && cs.Size() > 0 {
+		f, err := d.cache.Open(completePath)
+		if err != nil {
+			return nil, err
+		}
+		b, err := io.ReadAll(f)
+		defer f.Close()
+		br := bytes.NewReader(b)
+		return br, err
+	}
+
+	f, err := d.cache.Create(completePath)
+	defer f.Close()
+	if err != nil {
+		return nil, err
+	}
+	r, err := http.Get(urlString)
+	if err != nil {
+		return nil, err
+	}
+	b, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+	_, err = f.Write(b)
+	br := bytes.NewReader(b)
 	return br, err
 
 }
@@ -113,9 +185,9 @@ func (d *deltaSharingRestClient) callSharingServer(request string) (*[][]byte, e
 		return nil, &DSErr{pkg, fn, "http.DefaultClient.Do", err.Error()}
 	}
 	defer response.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, &DSErr{pkg, fn, "ioutil.ReadAll", err.Error()}
+		return nil, &DSErr{pkg, fn, "io.ReadAll", err.Error()}
 	}
 	x := bytes.Split(bodyBytes, []byte{'\n'})
 	for _, v := range x {
@@ -158,9 +230,9 @@ func (d *deltaSharingRestClient) callSharingServerWithParameters(request string,
 	}
 
 	defer response.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, &DSErr{pkg, fn, "ioutil.ReadAll", err.Error()}
+		return nil, &DSErr{pkg, fn, "io.ReadAll", err.Error()}
 	}
 	x := bytes.Split(bodyBytes, []byte{'\n'})
 	for _, v := range x {
@@ -319,7 +391,6 @@ func (c deltaSharingRestClient) QueryTableMetadata(table Table) (*queryTableMeta
 		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
 	}
 	return &queryTableMetadataReponse{Metadata: metadata.Metadata, Protocol: p}, err
-
 }
 
 func (c deltaSharingRestClient) QueryTableVersion(table Table) (*queryTableVersionResponse, error) {
@@ -384,7 +455,7 @@ func (c *deltaSharingRestClient) postQuery(request string, predicateHints []stri
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "json.Marshal", err.Error()}
 	}
-	reqBody := ioutil.NopCloser(strings.NewReader(string(msg)))
+	reqBody := io.NopCloser(strings.NewReader(string(msg)))
 	url, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, &DSErr{pkg, fn, "url.Parse", err.Error()}
@@ -417,9 +488,9 @@ func (c *deltaSharingRestClient) postQuery(request string, predicateHints []stri
 	}
 
 	defer response.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, &DSErr{pkg, fn, "ioutil.ReadAll", err.Error()}
+		return nil, &DSErr{pkg, fn, "io.ReadAll", err.Error()}
 	}
 	x := bytes.Split(bodyBytes, []byte{'\n'})
 	for _, v := range x {

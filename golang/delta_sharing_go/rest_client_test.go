@@ -30,6 +30,7 @@ func TestNewDeltaSharingRestClient(t *testing.T) {
 	type args struct {
 		ctx        context.Context
 		profile    *deltaSharingProfile
+		cacheDir   string
 		numRetries int
 	}
 	tests := []struct {
@@ -47,6 +48,7 @@ func TestNewDeltaSharingRestClient(t *testing.T) {
 					BearerToken:             "123456789",
 					ExpirationTime:          "",
 				},
+				cacheDir:   "",
 				numRetries: 5,
 			},
 			want: &deltaSharingRestClient{
@@ -56,6 +58,7 @@ func TestNewDeltaSharingRestClient(t *testing.T) {
 					BearerToken:             "123456789",
 					ExpirationTime:          "",
 				},
+				cacheDir:   "",
 				numRetries: 5,
 				ctx:        context.Background(),
 			},
@@ -64,7 +67,7 @@ func TestNewDeltaSharingRestClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newDeltaSharingRestClient(tt.args.ctx, tt.args.profile, tt.args.numRetries); !reflect.DeepEqual(got, tt.want) {
+			if got := newDeltaSharingRestClient(tt.args.ctx, tt.args.profile, tt.args.cacheDir, tt.args.numRetries); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewDeltaSharingRestClient() = %v, want %v", got, tt.want)
 			}
 		})
