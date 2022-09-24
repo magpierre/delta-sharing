@@ -132,7 +132,7 @@ func TestNewSharingClient(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewSharingClient(tt.args.Ctx, tt.args.ProfileFile)
+			got, err := NewSharingClient(tt.args.Ctx, tt.args.ProfileFile, "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSharingClient() error = %v, wantErr %v", err, tt.wantErr)
 				return
