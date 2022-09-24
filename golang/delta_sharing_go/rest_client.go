@@ -68,7 +68,7 @@ type listCdcFilesResponse struct {
 	Metadata metadata
 	Action   struct {
 		Add    []File
-		Cdc    []File
+		Cdf    []File
 		Remove []File
 	}
 }
@@ -514,4 +514,63 @@ func (c *deltaSharingRestClient) shouldRetry(r *http.Response) bool {
 	} else {
 		return false
 	}
+}
+
+func (c *deltaSharingRestClient) ListTableChanges(table Table, options CdfOptions) (*listCdcFilesResponse, error) {
+	pkg := "rest_client.go"
+	fn := "ListTableChanges"
+	url := "/shares/" + table.Share + "/schemas/" + strings.Trim(table.Schema, " ") + "/tables/" + table.Name + "/changes?"
+	var params []string
+	if options.StartingVersion != nil {
+		params = append(params, "startingVersion="+fmt.Sprint(*options.StartingVersion))
+	}
+	if options.StartingTimestamp != nil {
+		params = append(params, "startingTimestamp="+fmt.Sprint(*options.StartingTimestamp))
+	}
+	if options.EndingVersion != nil {
+		params = append(params, "endingVersion="+fmt.Sprint(*options.EndingVersion))
+	}
+	if options.EndingTimestamp != nil {
+		params = append(params, "endingTimestamp="+fmt.Sprint(*options.EndingTimestamp))
+	}
+	paramString := strings.Join(params, "&")
+	rd, err := c.callSharingServer(url + paramString)
+	if err != nil {
+		return nil, &DSErr{pkg, fn, "c.callSharingServer", err.Error()}
+	}
+	if rd == nil || len(*rd) < 3 {
+		return nil, &DSErr{pkg, fn, "len(*rd)", "Array returned is too short"}
+	}
+	var p protocol
+	var m protoMetadata
+	var f protoCdcFile
+
+	err = json.Unmarshal((*rd)[0], &p)
+	if err != nil {
+		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
+	}
+	err = json.Unmarshal((*rd)[1], &m)
+	if err != nil {
+		return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
+	}
+	l := listCdcFilesResponse{Protocol: p, Metadata: m.Metadata}
+	for _, v := range (*rd)[2:] {
+		if len(v) == 0 {
+			continue
+		}
+		err = json.Unmarshal(v, &f)
+		if err != nil {
+			return nil, &DSErr{pkg, fn, "json.Unmarshal", err.Error()}
+		}
+		if f.File != nil {
+			l.Action.Add = append(l.Action.Add, *f.File)
+		}
+		if f.Cdc != nil {
+			l.Action.Cdf = append(l.Action.Cdf, *f.Cdc)
+		}
+		if f.Remove != nil {
+			l.Action.Remove = append(l.Action.Remove, *f.Remove)
+		}
+	}
+	return &l, err
 }

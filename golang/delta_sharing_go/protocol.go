@@ -137,6 +137,12 @@ type protoFile struct {
 	File File
 }
 
+type protoCdcFile struct {
+	File   *File `json:"file,omitempty"`
+	Cdc    *File `json:"cdc,omitempty"`
+	Remove *File `json:"remove,omitempty"`
+}
+
 type File struct {
 	Url             string            `json:"url"`
 	Id              string            `json:"id"`
@@ -200,4 +206,11 @@ type Table struct {
 type data struct {
 	PredicateHints []string `json:"predicateHints"`
 	LimitHint      int      `json:"limitHint"`
+}
+
+type CdfOptions struct {
+	StartingVersion   *int    `json:"starting_version,omitempty"`
+	EndingVersion     *int    `json:"ending_version,omitempty"`
+	StartingTimestamp *string `json:"starting_timestamp,omitempty"`
+	EndingTimestamp   *string `json:"ending_timestamp,omitempty"`
 }

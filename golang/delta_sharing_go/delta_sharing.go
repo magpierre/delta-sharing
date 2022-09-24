@@ -236,3 +236,7 @@ func (s *sharingClient) RemoveFileFromCache(url string) error {
 	}
 	return s.restClient.RemoveFileFromCache(url)
 }
+
+func (s *sharingClient) ListTableChanges(t Table, options CdfOptions) (*listCdcFilesResponse, error) {
+	return s.restClient.ListTableChanges(t, options)
+}
