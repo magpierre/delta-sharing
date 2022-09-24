@@ -3,7 +3,7 @@ module github.com/delta-io/delta_sharing_go
 go 1.18
 
 require (
-	github.com/apache/arrow/go/v8 v8.0.0-20220415204549-d36b2b3392ed
+	github.com/apache/arrow/go/v9 v9.0.0
 	github.com/spf13/afero v1.9.2
 )
 
@@ -18,10 +18,10 @@ require (
 	github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.14 // indirect
 	github.com/zeebo/xxh3 v1.0.1 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20211013180041-c96bc1413d57 // indirect
-	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27 // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.9 // indirect
+	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	google.golang.org/genproto v0.0.0-20220126215142-9970aeb2e350 // indirect
 	google.golang.org/grpc v1.44.0 // indirect
@@ -35,4 +35,5 @@ require (
 	github.com/klauspost/compress v1.15.1 // indirect
 	golang.org/x/exp v0.0.0-20220328175248-053ad81199eb // indirect
 	golang.org/x/net v0.0.0-20220403103023-749bd193bc2b // indirect
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
 )

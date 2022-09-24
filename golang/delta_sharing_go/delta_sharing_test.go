@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"testing"
 
-	arrow "github.com/apache/arrow/go/v8/arrow"
+	arrow "github.com/apache/arrow/go/v9/arrow"
 )
 
 func Test_ParseURL(t *testing.T) {
